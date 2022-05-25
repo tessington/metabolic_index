@@ -56,7 +56,7 @@
     // Parameters 
     PARAMETER_VECTOR( alpha_j );
     PARAMETER_VECTOR( L_z );
-    PARAMETER_VECTOR( cov_logmult_z ); // log-multiplier for process-error covariance for different taxonomic levels
+    PARAMETER_VECTOR( log_lambda ); // log-multiplier for process-error covariance for different taxonomic levels
     PARAMETER_MATRIX( beta_gj );
     PARAMETER( logsigma );
     
@@ -67,6 +67,7 @@
     int n_i = spc_in_PCgz.size();
     int n_g = PC_gz.col(0).size();
     int n_d = minuslogpo2.size();
+    int n_l = log_lambda.size();
     
   
     vector<Type> Parent_j( n_j );
@@ -77,6 +78,7 @@
     vector<Type> n_pow(n_i);
     vector<Type> Eo(n_i);
     matrix<Type> spc_ij(n_i, n_j);
+    vector<Type> lambda(n_l);
     
     // to make life easier, extract the species-level parameters into a matrix
     
@@ -85,6 +87,11 @@
         spc_ij(i,j) = beta_gj(spc_in_PCgz( i ), j );
       }
     }
+    // make vector of lambdas
+    for(int l = 0; l < n_l; l++) {
+       lambda( l ) =  exp(log_lambda( l ));
+    }
+    
     
     
     n_pow = spc_ij.col(0);
@@ -95,47 +102,50 @@
     // Objective funcction
     vector<Type> jnll_comp( 2 );
     jnll_comp.setZero();
+      
     using namespace density;
     
     // Process covariance
     Type min_var = 0.001;
     matrix<Type> Cov_jj( n_j, n_j );
     Cov_jj = cov_matrix(L_z, min_var, n_j);
-   
-
-
     
     // Probability of random effects above species level
    Type covmult;
    
     for( int g=0; g<n_g; g++ ){
+      int Child_num = PC_gz(g,1);
+      int Parent_row = PC_gz(g,0);
+      int lambda_num = Child_num - 1;
       for( int j=0; j<n_j; j++ ){
         if( PC_gz(g,1)==0 ) Parent_j(j) = alpha_j(j);
-        if( PC_gz(g,1)>=1 ) Parent_j(j) = beta_gj(PC_gz(g,0),j);
+        if( PC_gz(g,1)>=1 ) Parent_j(j) = beta_gj(Parent_row,j);
         Prediction_j(j) = Parent_j(j);
       }
       for( int j=0; j<n_j; j++ ){
         Deviation_j(j) = beta_gj(g,j) - Prediction_j(j);
       }
-      if( PC_gz(g,1)==0 ) covmult = 1;
-      if( PC_gz(g,1)>=1 ) covmult = exp(cov_logmult_z( PC_gz( g,1 ) - 1 ) );
+      if( Child_num==0 ) covmult = 1;
+      if( Child_num>=1 ) covmult = lambda( lambda_num);
       tmpCov_jj = Cov_jj * covmult;
         jnll_comp(0) += MVNORM( tmpCov_jj )( Deviation_j );
       }
 
     // Probability of the data
-   
-    
-    for( int d=0; d<n_d; d++){
-     mu(d ) =  Eo( taxa_id( d ) ) * invtemp( d ) + n_pow( taxa_id( d ) ) * logW( d  ) + logAo( taxa_id( d ) );
+    for( int id=0; id<n_d; id++){
+     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) + logAo( taxa_id( id ) );
     }
     
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );
     
     Type jnll = jnll_comp.sum();
+    
+   
+    
     // Return jnll
     // Add Reports
     ADREPORT(spc_ij);
+    REPORT(Cov_jj);
     return jnll;
   }
   

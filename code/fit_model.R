@@ -5,6 +5,26 @@ library(TMB)
 library(ggplot2)
 library(gridExtra)
 
+
+### Functions ####
+find_index <- function(x,y) y <- which(y == x)
+plotest <- function(dataest, trait, groupname) {
+  # make min and max
+  eval(parse(text = paste0("dataest$min <- dataest$", trait,"mle - 
+  dataest$",trait,"se")))
+  eval(parse(text = paste0("dataest$max <- dataest$", trait,"mle + 
+  dataest$",trait,"se")))
+  
+  
+  groupplot <- ggplot(data = dataest, aes_string(x = paste0(trait, "mle"), y = groupname)) +
+    geom_point() +
+    geom_errorbar(aes_string(y = groupname,
+                             xmin = "min",
+                             xmax = "max")
+    )
+  return(groupplot)
+}
+
 ### Generate Evolutionary Trait Structure ####
 
 #### Get taxonomy tree ####
@@ -31,7 +51,7 @@ tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
 
-Z_ik_est <- dplyr::select(all.dat, Class, Order, Species)
+Z_ik_est <- dplyr::select(all.dat, Class, Order, Family, Species)
 Z_ik_est <- unique(Z_ik_est, MARGIN = 1)
 ParentChild_gz_est = NULL
 # 1st column: child taxon name
@@ -95,9 +115,10 @@ data <- list(PC_gz = PC_gz_tmb,
 )
 
 parameters = list(alpha_j = rep(0,n_j),
-                  L_z = rep(1, length(L_z)),
-                  cov_logmult_z = rep(0, length(unique(PC_gz_tmb[,2])) -1),
+                  L_z = rep(1, 6),
+                  log_lambda = rep(0, length(unique(PC_gz_tmb[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
+                  logsigma_l = 0,
                   logsigma = 0
 )
 Random <- c("beta_gj")
@@ -113,7 +134,7 @@ obj <-
     parameters = parameters,
     DLL = model,
     random = Random,
-    silent = TRUE
+    silent = FALSE
   )
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
@@ -129,45 +150,17 @@ beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol 
 beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
 
 
-# make dataframe to hold everything
-datatest <- tibble(Species = NA,
-                   estAo = spc_ij_mle[,3],
-                  estn = spc_ij_mle[,1],
-                  estEo = spc_ij_mle[,2],
-                  Aose = spc_ij_se[,3],
-                  nse = spc_ij_se[,1],
-                  Eose = spc_ij_se[,2],
-                  nsize = nsizes$nsize,
-                  sizerange = nsizes$sizerange
-                  )
-
-
-
+### Plot Estimates ####
 
 ClassEst <- tibble(Class = ParentChild_gz_est$ChildName[1:11],
-                   Aomle = -beta_mle[1:11,2],
+                   Aomle = beta_mle[1:11,2],
                    Aose = beta_se[1:11,2],
-                   Eomle = -beta_mle[1:11,3],
+                   Eomle = beta_mle[1:11,3],
                    Eose = beta_se[1:11,3],
-                   nmle = -beta_mle[1:11,1],
+                   nmle = beta_mle[1:11,1],
                    nse = beta_se[1:11, 1])
 
-plotest <- function(dataest, trait, groupname) {
-  # make min and max
-  eval(parse(text = paste0("dataest$min <- dataest$", trait,"mle - 
-  dataest$",trait,"se")))
-  eval(parse(text = paste0("dataest$max <- dataest$", trait,"mle + 
-  dataest$",trait,"se")))
-  
-                   
-groupplot <- ggplot(data = dataest, aes_string(x = paste0(trait, "mle"), y = groupname)) +
-  geom_point() +
-  geom_errorbar(aes_string(y = groupname,
-                    xmin = "min",
-                    xmax = "max")
-  )
-return(groupplot)
-}
+
 
 Aoplot <- plotest(ClassEst, "Ao", "Class")
 Eoplot <- plotest(ClassEst, "Eo", "Class")
@@ -184,11 +177,11 @@ longOrderNames <- ParentChild_gz_est$ChildName[actinIndex]
 OrderNames <- gsub(".*_","",longOrderNames)
 
 ActinEst <- tibble(Order = OrderNames,
-                   Aomle = -beta_mle[actinIndex,2],
+                   Aomle = beta_mle[actinIndex,2],
                    Aose = beta_se[actinIndex,2],
-                   Eomle = -beta_mle[actinIndex,3],
+                   Eomle = beta_mle[actinIndex,3],
                    Eose = beta_se[actinIndex,3],
-                   nmle = -beta_mle[actinIndex,1],
+                   nmle = beta_mle[actinIndex,1],
                    nse = beta_se[actinIndex,1]
 )
 
@@ -199,14 +192,14 @@ nplot <- plotest(ActinEst, "n", "Order")
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 # plot all species
-longSpeciesNames <- ParentChild_gz_est$ChildName[ParentChild_gz_est[,'ChildTaxon']==3]
+longSpeciesNames <- ParentChild_gz_est$ChildName[ParentChild_gz_est[,'ChildTaxon']==4]
 SpeciesNames <- gsub(".*_","",longSpeciesNames)
 SpeciesEst <- tibble(Species = SpeciesNames,
-                 Aomle =-spc_ij_mle[,2],
+                 Aomle =spc_ij_mle[,2],
                  Aose = spc_ij_se[,2],
-                 Eomle = -spc_ij_mle[,3],
+                 Eomle = spc_ij_mle[,3],
                  Eose = spc_ij_se[,3],
-                 nmle = -spc_ij_mle[,1],
+                 nmle = spc_ij_mle[,1],
                  nse = spc_ij_se[,1]
 )
 Aoplot <- plotest(SpeciesEst, "Ao", "Species")
