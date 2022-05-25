@@ -94,7 +94,7 @@ n_g = nrow(ParentChild_gz_est)
 n_i <- length(g_i)
 
 #### Redo index of data to Parent - Child ####
-Z_ik_dat <- dplyr::select(all.dat, Class, Order, Species)
+Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
 Taxa_Names_dat <-  apply( Z_ik_dat, MARGIN=1, FUN=paste, collapse="_")
 g_i_dat = match( Taxa_Names_dat, ParentChild_gz_est[,'ChildName'] )
 
