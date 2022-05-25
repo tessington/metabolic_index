@@ -35,76 +35,79 @@ naIndex <- which(is.na(all.dat$Species))
 for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
 
 
+# describe the data a bit - how many unique familes per order
+class_summary <- all.dat %>%
+  group_by(Class) %>%
+  summarise(NoOrder = length(unique(Order)))
+print(class_summary, n = 30)
 
-# for debugging, how many unique sizes per taxa
+order_summary <- all.dat %>%
+  group_by(Order) %>%
+  summarise(NoFamily = length(unique(Family)))
+print(order_summary, n = 50)
 
-nsizes <- all.dat %>%
-  group_by(Species) %>%
-  summarise(nsize = length(unique(W)), sizerange = log(max(W) / min(W)))
-          
+family_summary <- all.dat %>%
+  group_by(Family) %>%
+  summarise(NoGenus = length(unique(Genera)))
+print(family_summary, n = 70)
+
   
 
-#### Setup TMB data and parameters ####
-### Create new ParentChild matrix for reduced taxonomic structure
+### Setup TMB data and parameters ####
+#### Create new ParentChild matrix for reduced taxonomic structure ####
 kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
 
-Z_ik_est <- dplyr::select(all.dat, Class, Order, Family, Species)
-Z_ik_est <- unique(Z_ik_est, MARGIN = 1)
-ParentChild_gz_est = NULL
+Z_ik <- dplyr::select(all.dat, Class, Order, Family, Species)
+Z_ik <- unique(Z_ik, MARGIN = 1)
+ParentChild_gz = NULL
 # 1st column: child taxon name
 # 2nd column: parent taxon name
 # 3rd column: parent row-number in ParentChild_gz
 # 4th column: Taxon level
 # Loop through
-for( colI in 1:ncol(Z_ik_est)){
-  Taxa_Names = apply( Z_ik_est[,1:colI,drop=FALSE], MARGIN=1, FUN=paste, collapse="_")
+for( colI in 1:ncol(Z_ik)){
+  Taxa_Names = apply( Z_ik[,1:colI,drop=FALSE], MARGIN=1, FUN=paste, collapse="_")
   Unique_Taxa = unique(Taxa_Names)
   for( uniqueI in 1:length(Unique_Taxa) ){
     Which = which( Taxa_Names == Unique_Taxa[uniqueI] )
     if( colI==1 ){
-      ParentChild_gz_est = rbind( ParentChild_gz_est, c(Unique_Taxa[uniqueI], NA, NA, colI) )
+      ParentChild_gz = rbind( ParentChild_gz, c(Unique_Taxa[uniqueI], NA, NA, colI) )
     }else{
-      if( length(unique(Z_ik_est[Which,colI-1]))>1 ) stop("Taxa has multiple parents")
+      if( length(unique(Z_ik[Which,colI-1]))>1 ) stop("Taxa has multiple parents")
       ChildName = Unique_Taxa[uniqueI]
       ParentName = paste(rev(rev(strsplit(ChildName,"_")[[1]])[-1]),collapse="_")
-      ParentChild_gz_est = rbind( ParentChild_gz_est, c(ChildName, ParentName, match(ParentName,ParentChild_gz_est[,1]), colI) )
+      ParentChild_gz = rbind( ParentChild_gz, c(ChildName, ParentName, match(ParentName,ParentChild_gz[,1]), colI) )
     }
   }
 }
 
-# Add top predictive
-
-#ParentChild_gz_est = rbind( ParentChild_gz_est, c("predictive", NA, NA, 1) )
-#for( colI in 2:ncol(Z_ik_est)) ParentChild_gz_est = rbind( ParentChild_gz_est, c(paste(rep("predictive",colI),collapse="_"), paste(rep("predictive",colI-1),collapse="_"), match(paste(rep("predictive",colI-1),collapse="_"),ParentChild_gz_est[,1]), colI) )
 # Relabel
-ParentChild_gz_est = data.frame( ParentChild_gz_est )
-colnames(ParentChild_gz_est) = c("ChildName", "ParentName", "ParentRowNumber", "ChildTaxon")
-ParentChild_gz_est[,'ParentRowNumber'] = as.numeric(as.character(ParentChild_gz_est[,'ParentRowNumber']))
-ParentChild_gz_est[,'ChildTaxon'] = as.numeric(as.character(ParentChild_gz_est[,'ChildTaxon']))
-PC_gz_tmb <- as.matrix(ParentChild_gz_est[, c('ParentRowNumber', 'ChildTaxon')]) - 1
+ParentChild_gz = data.frame( ParentChild_gz )
+colnames(ParentChild_gz) = c("ChildName", "ParentName", "ParentRowNumber", "ChildTaxon")
+ParentChild_gz[,'ParentRowNumber'] = as.numeric(as.character(ParentChild_gz[,'ParentRowNumber']))
+ParentChild_gz[,'ChildTaxon'] = as.numeric(as.character(ParentChild_gz[,'ChildTaxon']))
+PC_gz<- as.matrix(ParentChild_gz[, c('ParentRowNumber', 'ChildTaxon')]) - 1
 # Identify location for every observation
-Taxa_Names = apply( Z_ik_est, MARGIN=1, FUN=paste, collapse="_")
-g_i = match( Taxa_Names, ParentChild_gz_est[,'ChildName'] )
-n_k = ncol(Z_ik_est)
+Taxa_Names = apply( Z_ik, MARGIN=1, FUN=paste, collapse="_")
+g_i = match( Taxa_Names, ParentChild_gz[,'ChildName'] )
+n_k = ncol(Z_ik)
 n_j = 3 # three traits
-n_g = nrow(ParentChild_gz_est)
+n_g = nrow(ParentChild_gz)
 n_i <- length(g_i)
 
-#### Redo index of data to Parent - Child ####
+#### Create index of data to Parent - Child ####
 Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
 Taxa_Names_dat <-  apply( Z_ik_dat, MARGIN=1, FUN=paste, collapse="_")
-g_i_dat = match( Taxa_Names_dat, ParentChild_gz_est[,'ChildName'] )
-
-
+g_i_dat = match( Taxa_Names_dat, ParentChild_gz[,'ChildName'] )
 g_i_i <- sapply(FUN = find_index, X = g_i_dat, y = g_i)
 
-# make index that identifies which of the rows of PC_gz correspond to species
-spc_in_PC_gz <- which(PC_gz_tmb[,2] == max(PC_gz_tmb[,2]))
+# Create index of species to Parent  - Child
+spc_in_PC_gz <- which(PC_gz[,2] == max(PC_gz[,2]))
 
-data <- list(PC_gz = PC_gz_tmb,
+data <- list(PC_gz = PC_gz,
              g_i = g_i - 1,
              invtemp = all.dat$inv.temp,
              logW = log(all.dat$W),
@@ -116,7 +119,7 @@ data <- list(PC_gz = PC_gz_tmb,
 
 parameters = list(alpha_j = rep(0,n_j),
                   L_z = rep(1, 6),
-                  log_lambda = rep(0, length(unique(PC_gz_tmb[,2])) -1),
+                  log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
                   logsigma_l = 0,
                   logsigma = 0
@@ -134,7 +137,7 @@ obj <-
     parameters = parameters,
     DLL = model,
     random = Random,
-    silent = FALSE
+    silent = TRUE
   )
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
@@ -152,7 +155,7 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol =
 
 ### Plot Estimates ####
 
-ClassEst <- tibble(Class = ParentChild_gz_est$ChildName[1:11],
+ClassEst <- tibble(Class = ParentChild_gz$ChildName[1:11],
                    Aomle = beta_mle[1:11,2],
                    Aose = beta_se[1:11,2],
                    Eomle = beta_mle[1:11,3],
@@ -170,8 +173,8 @@ grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 
 ### Plot actinopterygii ####
-actinIndex <- grep(x = ParentChild_gz_est$ParentName, pattern = "\\bActinopteri\\b")
-longOrderNames <- ParentChild_gz_est$ChildName[actinIndex]
+actinIndex <- grep(x = ParentChild_gz$ParentName, pattern = "\\bActinopteri\\b")
+longOrderNames <- ParentChild_gz$ChildName[actinIndex]
 
 # Remove all before and up to ":":
 OrderNames <- gsub(".*_","",longOrderNames)
@@ -192,7 +195,7 @@ nplot <- plotest(ActinEst, "n", "Order")
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 # plot all species
-longSpeciesNames <- ParentChild_gz_est$ChildName[ParentChild_gz_est[,'ChildTaxon']==4]
+longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==4]
 SpeciesNames <- gsub(".*_","",longSpeciesNames)
 SpeciesEst <- tibble(Species = SpeciesNames,
                  Aomle =spc_ij_mle[,2],
