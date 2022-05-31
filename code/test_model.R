@@ -6,7 +6,7 @@ library(ggplot2)
 library(gridExtra)
 
 ### Generate Evolutionary Trait Structure ####
-
+set.seed(123)
 #### Get taxonomy tree ####
 all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
 # remove data where there is no body size data
@@ -59,13 +59,13 @@ n_i <- length(g_i)
 
 
 #### Specify all parameters ####
-alpha_j <- c(0, 2, -0.8) # means above class
+alpha_j <- c(0, 2, 0.8) # means above class
 # lambda - relative covariance w/in groups
-lambda_g <- c(1, 1, 0.6, 0.6, 0.4)
+lambda_g <- c(1, .8, 0.6, 0.6, 0.4)
 # Specify  variance covariance and generate L_z
-sigma1 <- 0.25
-sigma2 <- 2
-sigma3 <- 0.25
+sigma1 <- 0.1
+sigma2 <- .5
+sigma3 <- 0.2
 rho12 <- 0.5
 rho13 <- 0.25
 rho23 <- 0.5
@@ -170,7 +170,7 @@ nsizes <- all.dat %>%
 #### Setup TMB data and parameters ####
 ### Create new ParentChild matrix for reduced taxonomic structure
 
-Z_ik_est <- dplyr::select(all.dat, Class, Order, Species)
+Z_ik_est <- dplyr::select(all.dat, Class, Order, Family, Species)
 Z_ik_est <- unique(Z_ik_est, MARGIN = 1)
 ParentChild_gz_est = NULL
 # 1st column: child taxon name
@@ -213,7 +213,7 @@ n_g = nrow(ParentChild_gz_est)
 n_i <- length(g_i)
 
 #### Redo index of data to Parent - Child ####
-Z_ik_dat <- dplyr::select(all.dat, Class, Order, Species)
+Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
 Taxa_Names_dat <-  apply( Z_ik_dat, MARGIN=1, FUN=paste, collapse="_")
 g_i_dat = match( Taxa_Names_dat, ParentChild_gz_est[,'ChildName'] )
 
@@ -235,7 +235,7 @@ data <- list(PC_gz = PC_gz_tmb,
 
 parameters = list(alpha_j = rep(0,n_j),
                   L_z = rep(1, length(L_z)),
-                  cov_logmult_z = rep(0, length(unique(PC_gz_tmb[,2])) -1),
+                  log_lambda = rep(0, length(unique(PC_gz_tmb[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
                   logsigma = 0
 )
@@ -362,3 +362,5 @@ Eoplot <- plotest(ActinEst, "Eo", "Order")
 nplot <- plotest(ActinEst, "n", "Order")
 
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
+summary(rep, "fixed")

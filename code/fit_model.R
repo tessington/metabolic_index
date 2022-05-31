@@ -35,7 +35,7 @@ naIndex <- which(is.na(all.dat$Species))
 for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
 
 
-# describe the data a bit - how many unique familes per order
+# describe the data a bit - how many unique  order per class, families per order, etc.
 class_summary <- all.dat %>%
   group_by(Class) %>%
   summarise(NoOrder = length(unique(Order)))
@@ -59,9 +59,11 @@ kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
+taxa.list <- c("Class", "Order", "Family", "Species")
 
-Z_ik <- dplyr::select(all.dat, Class, Order, Family, Species)
-Z_ik <- unique(Z_ik, MARGIN = 1)
+
+Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
+Z_ik <- unique(Z_ik_main, MARGIN = 1)
 ParentChild_gz = NULL
 # 1st column: child taxon name
 # 2nd column: parent taxon name
@@ -99,8 +101,8 @@ n_g = nrow(ParentChild_gz)
 n_i <- length(g_i)
 
 #### Create index of data to Parent - Child ####
-Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
-Taxa_Names_dat <-  apply( Z_ik_dat, MARGIN=1, FUN=paste, collapse="_")
+#Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
+Taxa_Names_dat <-  apply( Z_ik_main, MARGIN=1, FUN=paste, collapse="_")
 g_i_dat = match( Taxa_Names_dat, ParentChild_gz[,'ChildName'] )
 g_i_i <- sapply(FUN = find_index, X = g_i_dat, y = g_i)
 
@@ -121,7 +123,6 @@ parameters = list(alpha_j = rep(0,n_j),
                   L_z = rep(1, 6),
                   log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
-                  logsigma_l = 0,
                   logsigma = 0
 )
 Random <- c("beta_gj")
@@ -142,6 +143,7 @@ obj <-
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
                 getReportCovariance = FALSE)
+summary(rep, "fixed")
 re <- summary(rep, "report")
 spc_parameters <- re[grep(rownames(re), pattern  = "spc_ij"),1]
 spc_parameters_se <-re[grep(rownames(re), pattern  = "spc_ij"),2]
