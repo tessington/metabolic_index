@@ -46,7 +46,6 @@
     
     DATA_IMATRIX( PC_gz );
     DATA_IVECTOR( g_i );
-    
     DATA_VECTOR( invtemp );
     DATA_VECTOR( logW );
     DATA_IVECTOR( taxa_id );
@@ -61,7 +60,7 @@
     PARAMETER( logsigma );
     
     
-    // Derived data
+    // Derived data and parameters
     Type sigma = exp(logsigma);
     int n_j = beta_gj.row(0).size();
     int n_i = spc_in_PCgz.size();
@@ -126,7 +125,7 @@
         Deviation_j(j) = beta_gj(g,j) - Prediction_j(j);
       }
       if( Child_num==0 ) covmult = 1;
-      if( Child_num>=1 ) covmult = lambda( lambda_num);
+      if( Child_num>=1 ) covmult = lambda( lambda_num );
       tmpCov_jj = Cov_jj * covmult;
         jnll_comp(0) += MVNORM( tmpCov_jj )( Deviation_j );
       }
