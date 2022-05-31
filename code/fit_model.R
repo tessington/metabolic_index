@@ -57,6 +57,10 @@ if (rem.classes) {
 keep.class <- class_summary$Class[class_summary$NoOrder>1]
 all.dat <- dplyr::filter(all.dat, Class %in% keep.class)
 }
+
+fish.only <- FALSE
+if (fish.only) all.dat <- dplyr::filter(all.dat, Class == "Actinopteri")
+
 ### Setup TMB data and parameters ####
 #### Create new ParentChild matrix for reduced taxonomic structure ####
 kb <-  8.617333262145E-5
