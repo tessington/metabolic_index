@@ -1,7 +1,7 @@
 ---
-title: "Tim's Take on Taxonomic Hierarchy Modeling"
+title: "Hierarchical Estimation of Metabolic Index Parameters"
 author: "Tim!"
-date: "5/11/2022"
+date: "6/01/2022"
 output: pdf_document
 ---
 
@@ -11,86 +11,127 @@ library(dplyr)
 library(MASS)
 ```
 
-## Tim's take on the model
+## Basic Model structure
 
-From Thorson et al and Thorson (2020), but basic model for the vector of life history traits corresponding to some child  taxonomic group, $g$ is:
-$$g \sim MVN(x_{p(g)}, \Sigma_{l(g)} $$
-where $p(g)$ is the parent taxonomy level for child group $g$, and $\Sigma_{l(g)}$ is the evolutionary covariance, and $l(g)$ indicates the taxonomic level of gropu $g$.  For reference $l(g) =1$ refers to Class. 
+### Metabolic Index
+
+The metabolic index is the ratio of metabolic demands to metabolic supply, both expressed as Arrhenius equations:
+
+$$\phi = pO_2 A_o W^n \exp\bigg(\frac{E_o}{k_b} \big(\frac{1}{T} - \frac{1}{T_{ref}}\big) \bigg) $$
+where $T$ is temperature (degrees Kelvin), $T_{ref}$ is a specified reference temperature (here chosen to be 15 degrees C), $pO_2$ is the partial pressure of oxygen (in kPa), $W$ is body size, $k_b$ is Boltzmann's constant, and $A_o$, , $n$ and $E_o$ are estimated parameters.  Thus, for any taxa, we define the vector $\textbf{g}$ as the true mean values of these three parameters for each species.
+
+### Paramater Estimation 
+To estimate these parameters hierarchically, we use the evolutionary random walk model used for other life history traits as described by Thorson (2020).  The model tracks the mean values of any taxonomic grouping (the "child") as a function of the mean values of the higher taxonomic group (the "parent") in which the taxa is nested.  For instance, the mean value for a particular Order will depend on the mean value for that Order's Class.  The distribution of trait values within a parent taxonomic grouping is described by a multivariate normal distribution:
+
+$$\textbf{g} \sim MVN(\textbf{x}_{p(g)}, \Sigma_{l(g)} $$
+where $p(g)$ is the parent taxonomy level for child group $g$, and $\Sigma_{l(g)}$ is the evolutionary covariance, and $l(g)$ indicates the taxonomic level of group $g$.  For reference $l(g) =1$ refers to Class. 
 
 The estimation procedure works by estimating a vector of elements of the lower triangular matrix, $\textbf{L}_{\Sigma}$,so the evoluationary covariance matrix equals:
 
 $$\Sigma_{l(g)} = \lambda_l \big( \textbf{L}_{\Sigma} \textbf{L}_{\Sigma}^T + \textbf{D} \big) $$
 
-where $\textbf{D}$ is a diagonal matrix the additional and independent evolutionary variance in traits ($\sigma_j^2$). The parameter $\lambda_{l(g)}$ is the relative amount of of covariance explained by taxonomic level $l$ relative to Taxonomic level Class (e.g. $\lambda_{l(g) =1} = 1$).
+where $\textbf{D}$ is a diagonal matrix of the additional and independent evolutionary variance in traits ($\sigma_j^2$). The parameter $\lambda_{l(g)}$ is the relative amount of of covariance explained by taxonomic level $l$ relative to taxonomic level Class (e.g. $\lambda_{l(g) =1} = 1$).
 
-Now is where I get a little lost because there is an additional covariance matrix for the residuals:
-$$\tilde{y} \sim MVN(x_{g(l)}, \textbf{V}) $$
-where $\tilde{y}$ is the "augemented data for the ith study.  
+Currently, the diagonal elements of $D$ are not explicitly being included in the estimation.
+If we assume that the critical values are those that make $\phi = 1$, we re-arrange the first equation and add random error, then for each experimental observation $i$:
+$$ -\log(pO_{2,crit,i} = \log(A_{o,g[i]}) + n_{g[i]} \log(W_i) + E_{o, g[i]} T'_i + \epsilon_i $$
+where
+$$T'_i = \bigg(\frac{1}{k_b} \big(\frac{1}{T_i} - \frac{1}{T_{ref}} \big) \bigg) $$
 
-Fixed effects are the evolutionary covariance ($\textbf{L}_{\Sigma}$), and the residual covariance ($\textbf{V}$)
+and
+$$e_i \sim N(0, \sigma) $$
 
-In the TMB code, I see something like this (with my annotations):
+### The Data
 
-``` {r eval = FALSE}
-// Probability of random effects
-  vector<Type> Parent_j( n_j );  # create vector of parent mean trait alues
-  vector<Type> Prediction_j( n_j ); # create vector to hold predicted values of traits
-  vector<Type> Deviation_j( n_j ); # MVN only works on 0 means, so create a vector of deviations
-  matrix<Type> tmpCov_jj( n_j, n_j ); # not entirely sure, see below
-  for( int g=0; g<n_g; g++ ){  # loop through each taxonomic grouping
-    for( int j=0; j<n_j; j++ ){ # loop through trait
-      if( PC_gz(g,1)==0 ) Parent_j(j) = alpha_j(j); # if group = Class, then look up values in alpha
-      if( PC_gz(g,1)>=1 ) Parent_j(j) = betainput_gj(PC_gz(g,0),j); # otherwise, look up values in betainput
-      Prediction_j(j) = Parent_j(j); # assign prediction to equal value of parent
-    }
-    for( int j=0; j<n_j; j++ ){
-      Deviation_j(j) = betainput_gj(g,j) - Prediction_j(j); # deviations, duh
-    }
-    tmpCov_jj = Cov_jj * exp(cov_logmult_z(PC_gz(g,1))); # ok, this is where I have some trouble Cov_jj would seem to be the covariance of traits (thus the jj subscript), but this is multiplied by some factor that correspons to the child level.  So, am i right that the residual covariance is a multiplier of the evoluationary covariance?
-    if( Options_vec(4)==false ){
-      jnll_comp(PC_gz(g,1)) += MVNORM( tmpCov_jj )( Deviation_j ); # get the NLL of the vector of j traits for taxa group g
-    }
-  }
-```
-  I can see that we do indeed estimate two separate vectors L_v and obsL_v, which I'm guessing are the two different things.  The obsCov seems to rely on this:
+Penn and Duetsch have compiled several experimental studies relating $pO_{2,crit}$ to temperature and oxygen to which Essington et al. (2022) added information for an additional four species.  A brief summary of the number of experimental studies by taxonomic grouping is below
 
-```{r eval = FALSE}  
-  matrix<int> RAMobs( 0, 5 );
-  matrix<Type> obsCov_jj( n_j, n_j );
-  obsCov_jj = cov_matrix( obsL_z, RAMobs, Options(0), n_j, Options_vec(0) );
-```  
-The rest is pretty straitforward - using the observations ($Y_{i,j}$):
+```{r sumdata, echo = FALSE}
+library(dplyr)
+library(MASS)
+library(TMB)
+library(ggplot2)
+library(gridExtra)
 
-```{r eval = FALSE}
-// Probability of data
-matrix<Type> Yhat_ij( n_i, n_j ); # get matrix of predicted values for each taxa group i
-for( int i=0; i<n_i; i++){ # loop through observations
-  if( Options_vec(4)==false ){ # this is a toggle to turn off taxonomic hierarchy
-    Yhat_ij.row( i ) = beta_gj.row( g_i(i) );
-  }else{
-    Yhat_ij.row( i ) = alpha_j;
-  }
-  jnll_comp(5) += MVNORM( obsCov_jj )( Ycomplete_ij.row(i) - Yhat_ij.row(i) ); # get NLL
+
+### Functions ####
+find_index <- function(x,y) y <- which(y == x)
+plotest <- function(dataest, trait, groupname) {
+  # make min and max
+  eval(parse(text = paste0("dataest$min <- dataest$", trait,"mle - 
+  dataest$",trait,"se")))
+  eval(parse(text = paste0("dataest$max <- dataest$", trait,"mle + 
+  dataest$",trait,"se")))
+  
+  
+  groupplot <- ggplot(data = dataest, aes_string(x = paste0(trait, "mle"), y = groupname)) +
+    geom_point() +
+    geom_errorbar(aes_string(y = groupname,
+                             xmin = "min",
+                             xmax = "max")
+    )
+  return(groupplot)
 }
-```
 
-## Generating Evolutionary Data
-
-Presume here that we have Class, Order, Family, Genus, Species, with three traits, logAo, n, and Eo.
-
-We start with the vector $\mathbb{\alpha}$ , which is 1 x 3.  From alpha, we sample MVN using a specified vector for $L_{\Sigma}$ to get values for each Order.  For simplicity, we'll use our actual data to create the parent - child matrix
-
-```{r generate_betas, echo = T}
-
-alpha_j <- c(1, -0.2, -0.8) # means above class
+### Generate Evolutionary Trait Structure ####
 
 #### Get taxonomy tree ####
 all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
-all.dat <- dplyr::select(all.dat, Temp, W, Pcrit, Class, Order, Family, Genera, Species)
+# remove data where there is no body size data
+all.dat <- dplyr::filter(all.dat, !is.na(W))
 naIndex <- which(is.na(all.dat$Species))
 for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
-Z_ik <- dplyr::select(all.dat, Class, Order, Family, Genera, Species)
-Z_ik <- unique(Z_ik, MARGIN = 1)
+
+
+# describe the data a bit - how many unique  order per class, families per order, etc.
+class_summary <- all.dat %>%
+  group_by(Class) %>%
+  summarise(NoOrder = length(unique(Order)))
+print(class_summary, n = 30)
+
+order_summary <- all.dat %>%
+  group_by(Order) %>%
+  summarise(NoFamily = length(unique(Family)))
+print(order_summary, n = 50)
+
+family_summary <- all.dat %>%
+  group_by(Family) %>%
+  summarise(NoGenus = length(unique(Genera)))
+print(family_summary, n = 70)
+```
+
+# Model Estimates
+
+``` {r runmodel, echo = F}
+find_index <- function(x,y) y <- which(y == x)
+plotest <- function(dataest, trait, groupname) {
+  # make min and max
+  eval(parse(text = paste0("dataest$min <- dataest$", trait,"mle - 
+  dataest$",trait,"se")))
+  eval(parse(text = paste0("dataest$max <- dataest$", trait,"mle + 
+  dataest$",trait,"se")))
+  
+  
+  groupplot <- ggplot(data = dataest, aes_string(x = paste0(trait, "mle"), y = groupname)) +
+    geom_point() +
+    geom_errorbar(aes_string(y = groupname,
+                             xmin = "min",
+                             xmax = "max")
+    )
+  return(groupplot)
+}
+
+
+### Setup TMB data and parameters ####
+#### Create new ParentChild matrix for reduced taxonomic structure ####
+kb <-  8.617333262145E-5
+tref <- 15
+all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
+all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
+taxa.list <- c("Class", "Order", "Family", "Species")
+
+
+Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
+Z_ik <- unique(Z_ik_main, MARGIN = 1)
 ParentChild_gz = NULL
 # 1st column: child taxon name
 # 2nd column: parent taxon name
@@ -113,15 +154,12 @@ for( colI in 1:ncol(Z_ik)){
   }
 }
 
-# Add top predictive
-ParentChild_gz = rbind( ParentChild_gz, c("predictive", NA, NA, 1) )
-for( colI in 2:ncol(Z_ik)) ParentChild_gz = rbind( ParentChild_gz, c(paste(rep("predictive",colI),collapse="_"), paste(rep("predictive",colI-1),collapse="_"), match(paste(rep("predictive",colI-1),collapse="_"),ParentChild_gz[,1]), colI) )
 # Relabel
 ParentChild_gz = data.frame( ParentChild_gz )
 colnames(ParentChild_gz) = c("ChildName", "ParentName", "ParentRowNumber", "ChildTaxon")
 ParentChild_gz[,'ParentRowNumber'] = as.numeric(as.character(ParentChild_gz[,'ParentRowNumber']))
 ParentChild_gz[,'ChildTaxon'] = as.numeric(as.character(ParentChild_gz[,'ChildTaxon']))
-PC_gz = as.matrix(ParentChild_gz[, c('ParentRowNumber', 'ChildTaxon')]) 
+PC_gz<- as.matrix(ParentChild_gz[, c('ParentRowNumber', 'ChildTaxon')]) - 1
 # Identify location for every observation
 Taxa_Names = apply( Z_ik, MARGIN=1, FUN=paste, collapse="_")
 g_i = match( Taxa_Names, ParentChild_gz[,'ChildName'] )
@@ -130,109 +168,129 @@ n_j = 3 # three traits
 n_g = nrow(ParentChild_gz)
 n_i <- length(g_i)
 
+#### Create index of data to Parent - Child ####
+#Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
+Taxa_Names_dat <-  apply( Z_ik_main, MARGIN=1, FUN=paste, collapse="_")
+g_i_dat = match( Taxa_Names_dat, ParentChild_gz[,'ChildName'] )
+g_i_i <- sapply(FUN = find_index, X = g_i_dat, y = g_i)
 
-# Specify all parameters
-# lambda - relative covariance w/in groups
-lambda_g <- c(1, 0.8, 0.6, 0.5, 0.3, 0.3)
-# Specify  variance covariance and generate L_z
-sigma1 <- 0.25
-sigma2 <- 2
-sigma3 <- 0.2
-rho12 <- 0.5
-rho13 <- 0.25
-rho23 <- 0.5
-L_z <- c(sigma1, sigma1 * sigma2 * rho12, sigma1 * sigma3 * rho13, sigma2, sigma2 * sigma3 * rho23, sigma3)
-L_zobs <- L_z * 0.5 
+# Create index of species to Parent  - Child
+spc_in_PC_gz <- which(PC_gz[,2] == max(PC_gz[,2]))
 
+data <- list(PC_gz = PC_gz,
+             g_i = g_i - 1,
+             invtemp = all.dat$inv.temp,
+             logW = log(all.dat$W),
+             taxa_id = g_i_i -1,
+             minuslogpo2 = all.dat$minuslogpo2,
+             spc_in_PCgz = spc_in_PC_gz -1
+             
+)
 
- ### Create evolutionary covariance matrix
-cov_matrix <- function(L_val, logmult_col, min_var, n_rows, n_cols, invertTF ){
-  L_rc<- matrix(0, n_rows, abs(n_cols))
-  Cov_rr <- matrix(0, n_rows, n_rows);
-  Return_rrN <- matrix(0, n_rows, n_rows);
-  
-  # Loadings matrix with zero upper-diagonal
-  Count = 1;
-  if(n_cols!=0 ){
-    for(r in 0:(n_rows -1)){
-      for(c in 0:(n_cols -1)){
-        if(r>=c){
-          L_rc[r+1,c+1] = L_val[Count]
-          Count <- Count +1 
-        }else{
-          L_rc[r+1,c+1] = 0.0
-        }
-      }
-    for(c in 0:(n_cols-1)){
-      L_rc[,c+1] = L_rc[,c+1] * exp(logmult_col[c+1])
-    }
-    }
-  }
-  ## Diagonal matrix
-  if( n_cols<=0 ){
-    for( r in 0:(n_rows-1)){
-      Cov_rr[r+1,r+1] = L_val[Count]*L_val[Count]
-      Count <- Count + 1
-    }
-  }
-  ## Additive constant on diagonal
-  for(r in 0:(n_rows -1)){
-    Cov_rr[r+1,r+1] = Cov_rr[r+1,r+1] + min_var # Necesary to prevent crashes during innner optimizer when using SR data
-  }
-  ## Combine and return
-  Cov_rr = Cov_rr + L_rc %*% t(L_rc)
-  if(invertTF==FALSE) Return_rr = Cov_rr
-  if(invertTF==TRUE) Return_rr = atomic::matinv( Cov_rr )
-  return (Return_rr)
-}
-
-
-Parent_j <- rep(0, n_j)
-Prediction_j <- rep(0, n_j)
-Deviation_j <- rep(0, n_j)
-tmpCov_jj <- matrix(0, n_j, n_j)
-
-beta_gj <- matrix(0, n_g, n_j)
-
-Cov_z <- cov_matrix(L_z, logmult_col = c(0,0,0), min_var = 0.01,  n_rows = 3, n_cols = 3, invertTF = FALSE)
-for(g in 1:n_g){
-    if( PC_gz[g,2]==1 ) {
-      Parent_j <- alpha_j + mvrnorm(n = 1, mu = rep(0, 3), Sigma = Cov_z)
-      beta_gj[g,] <- Parent_j
-    }
-    if( PC_gz[g,2]>=2 ) {
-      tmpCov_z <- Cov_z * lambda_g[PC_gz[g,2]]
-      Parent_j = beta_gj[PC_gz[g,2],] + mvrnorm(n = 1, mu = rep(0, 3), Sigma = tmpCov_z)
-      beta_gj[g,] <- Parent_j
-    }
-  }
-  
-
-```
-
-Now generate data from these expected values
-
-```{r makedata, echo = T}
-Y_ij <- Yhat_ij <- matrix(0,  n_i, n_j )
-Cov_zobs <- cov_matrix(L_zobs, logmult_col = c(0,0,0), min_var = 0.01,  n_rows = 3, n_cols = 3, invertTF = FALSE)
-for(i in 1:n_i){
-    Yhat_ij[ i, ] = beta_gj[g_i[i], ]
-    Y_ij[i,] <- Yhat_ij[i,] + mvrnorm(n = 1, mu = rep(0,3), Sigma = Cov_zobs)
-}
-
-```
-
-Set up code for TMB model fitting
-
-```{r setupTMB, echo = F}
-library(TMB)
-compile.and.load <- function(model) {
-  compile(paste0("code/TMB/", model, ".cpp"))
-  return(dyn.load(dynlib(paste0("src/TMB/",model))))
-}
-
+parameters = list(alpha_j = rep(0,n_j),
+                  L_z = rep(1, 6),
+                  log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
+                  beta_gj = matrix(0, nrow = n_g, ncol = n_j),
+                  logsigma = 0
+)
+Random <- c("beta_gj")
 
 model <- "hierarchical_mi"
+compile(paste0("code/TMB/", model, ".cpp"))
+dyn.load(dynlib(paste0("code/TMB/",model)))
 
-compile.and.load(model)
+
+obj <-
+  MakeADFun(
+    data = data,
+    parameters = parameters,
+    DLL = model,
+    random = Random,
+    silent = TRUE
+  )
+opt <- nlminb(obj$par, obj$fn, obj$gr)
+rep = sdreport( obj,
+                getReportCovariance = FALSE)
+summary(rep, "fixed")
+re <- summary(rep, "report")
+spc_parameters <- re[grep(rownames(re), pattern  = "spc_ij"),1]
+spc_parameters_se <-re[grep(rownames(re), pattern  = "spc_ij"),2]
+spc_ij_mle <- matrix(spc_parameters, nrow = n_i, ncol = 3, byrow = F)
+spc_ij_se <- matrix(spc_parameters_se, nrow = n_i, ncol = 3, byrow = F)
+
+re <- summary(rep, "random")
+beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 3, byrow = F)
+beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
+
+
+### Plot Estimates ####
+
+ClassEst <- tibble(Class = ParentChild_gz$ChildName[1:11],
+                   logAomle = beta_mle[1:11,2],
+                   logAose = beta_se[1:11,2],
+                   Eomle = beta_mle[1:11,3],
+                   Eose = beta_se[1:11,3],
+                   nmle = beta_mle[1:11,1],
+                   nse = beta_se[1:11, 1])
+
+
+
+Aoplot <- plotest(ClassEst, "logAo", "Class")
+Eoplot <- plotest(ClassEst, "Eo", "Class")
+nplot <- plotest(ClassEst, "n", "Class")
+
+grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
+
+### Plot actinopterygii ####
+actinIndex <- grep(x = ParentChild_gz$ParentName, pattern = "\\bActinopteri\\b")
+longOrderNames <- ParentChild_gz$ChildName[actinIndex]
+
+# Remove all before and up to ":":
+OrderNames <- gsub(".*_","",longOrderNames)
+
+ActinEst <- tibble(Order = OrderNames,
+                   logAomle = beta_mle[actinIndex,2],
+                   logAose = beta_se[actinIndex,2],
+                   Eomle = beta_mle[actinIndex,3],
+                   Eose = beta_se[actinIndex,3],
+                   nmle = beta_mle[actinIndex,1],
+                   nse = beta_se[actinIndex,1]
+)
+
+Aoplot <- plotest(ActinEst, "logAo", "Order")
+Eoplot <- plotest(ActinEst, "Eo", "Order")
+nplot <- plotest(ActinEst, "n", "Order")
+
+grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
+# plot all species
+longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==4]
+SpeciesNames <- gsub(".*_","",longSpeciesNames)
+SpeciesEst <- tibble(Species = SpeciesNames,
+                 logAomle =spc_ij_mle[,2],
+                 logAose = spc_ij_se[,2],
+                 Eomle = spc_ij_mle[,3],
+                 Eose = spc_ij_se[,3],
+                 nmle = spc_ij_mle[,1],
+                 nse = spc_ij_se[,1]
+)
+Aoplot <- plotest(SpeciesEst, "logAo", "Species")
+Aoplot
+Eoplot <- plotest(SpeciesEst, "Eo", "Species")
+Eoplot
+nplot <- plotest(SpeciesEst, "n", "Species")
+nplot
+#grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
 ```
+
+
+The data do not allow us to estimate Order-level mean trait values, as the maximum likelihood estimate of $lambda_{[l=2]}$ is converging to 0 i.e., the estimated variance of traits among orders within a class is zero.  This is not an inherent problem with the structure of the data: I have simulated the data using the same structure and find that I can reliably estimate order-level mean trait values.  Rather, it suggests that there is not sufficient variation across Orders given the variation in species within Orders and Families.
+
+Nonetheless, the estimated parameters largely make sense, and we minimally can generate priors for an out-of-sample taxa based on Class (though the differences there are small) or Family (where we have limited taxonomic coverage).
+
+It is notable that the estimated body size coefficients are so close to 0.  In my simulation testing it was very hard to accurately estimate $n$ unless there were really huge differences among taxa (and even then it was tough).  My guess it is because a lot of experiments / taxa don't have enough sizes to inform this, and the cross-species comparisons are heavily confounded with taxonomy.  
+
+# What does it mean
+This is a decent starting point for integrating into species distribution modeling.  Comparing spatially explicit models with statistical presence-only data will be a useful next step.

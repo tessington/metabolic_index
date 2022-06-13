@@ -4,6 +4,7 @@ library(MASS)
 library(TMB)
 library(ggplot2)
 library(gridExtra)
+library(readxl)
 
 
 ### Functions ####
@@ -153,10 +154,13 @@ rep = sdreport( obj,
                 getReportCovariance = FALSE)
 summary(rep, "fixed")
 re <- summary(rep, "report")
+
+
 spc_parameters <- re[grep(rownames(re), pattern  = "spc_ij"),1]
 spc_parameters_se <-re[grep(rownames(re), pattern  = "spc_ij"),2]
 spc_ij_mle <- matrix(spc_parameters, nrow = n_i, ncol = 3, byrow = F)
 spc_ij_se <- matrix(spc_parameters_se, nrow = n_i, ncol = 3, byrow = F)
+
 
 re <- summary(rep, "random")
 beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 3, byrow = F)
@@ -166,7 +170,7 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol =
 ### Plot Estimates ####
 
 ClassEst <- tibble(Class = ParentChild_gz$ChildName[1:11],
-                   Aomle = beta_mle[1:11,2],
+                   Aomle = beta_mle[1:11,1],
                    Aose = beta_se[1:11,2],
                    Eomle = beta_mle[1:11,3],
                    Eose = beta_se[1:11,3],
@@ -208,16 +212,44 @@ grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==4]
 SpeciesNames <- gsub(".*_","",longSpeciesNames)
 SpeciesEst <- tibble(Species = SpeciesNames,
-                 Aomle =spc_ij_mle[,2],
-                 Aose = spc_ij_se[,2],
+                 Aomle =spc_ij_mle[,1],
+                 Aose = spc_ij_se[,1],
                  Eomle = spc_ij_mle[,3],
                  Eose = spc_ij_se[,3],
-                 nmle = spc_ij_mle[,1],
-                 nse = spc_ij_se[,1]
+                 nmle = spc_ij_mle[,2],
+                 nse = spc_ij_se[,2]
 )
 Aoplot <- plotest(SpeciesEst, "Ao", "Species")
 Eoplot <- plotest(SpeciesEst, "Eo", "Species")
 nplot <- plotest(SpeciesEst, "n", "Species")
 
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
+
+### Compare fits to Penn et al. ####
+#### Convert Ao to atm
+
+SpeciesEst$Ao_atm = spc_ij_mle[,1] / 101.325
+SpeciesEst$Ao_atm_SE = spc_ij_se[,1] / 101.325
+
+
+#### Load previous fits ####
+penn.fits <- read_xlsx(path = "data/MI_traits_Est_by_Curtis.xlsx") 
+
+# reload the all.dat to be able to retrieve APHIAID for matching
+all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
+SpeciesEst$PennAo <- NA
+SpeciesEst$PennEo <- NA
+
+unique.species <- unique(SpeciesEst$Species)
+for (i in 1:length(unique.species)) {
+  spc.2.use <- tolower(unique.species[i])
+  all.dat.index <- which(all.dat$scientific.name == spc.2.use) [ 1 ]
+  aphiaID <- all.dat$AphiaID[all.dat.index]
+  penn.index <- which(penn.fits$AphiaID == aphiaID)
+  if (length(penn.index) ==1 ) {
+    SpeciesEst$PennAo[i] <- penn.fits$`Vh (atm)`[penn.index]
+    SpeciesEst$PennEo[i] <- penn.fits$`Eo (eV)`[penn.index]
+  }
+}
 

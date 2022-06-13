@@ -73,17 +73,23 @@
     vector<Type> Prediction_j( n_j );
     vector<Type> Deviation_j( n_j );
     matrix<Type> tmpCov_jj( n_j, n_j );
-    vector<Type> logAo(n_i);
+    vector<Type> Ao(n_i);
     vector<Type> n_pow(n_i);
     vector<Type> Eo(n_i);
     matrix<Type> spc_ij(n_i, n_j);
     vector<Type> lambda(n_l);
     
-    // to make life easier, extract the species-level parameters into a matrix
+    
+    // to make life easier, extract the species-level parameters into a matrix, and convert logAo to Ao
     
     for (int i = 0; i <n_i; i++) {
       for (int j = 0; j<n_j; j++) {
-        spc_ij(i,j) = beta_gj(spc_in_PCgz( i ), j );
+        if (j == 0) {
+          spc_ij(i,j) = exp(beta_gj(spc_in_PCgz( i ), j ));
+        }
+        if (j >0) {
+          spc_ij(i,j) = beta_gj(spc_in_PCgz( i ), j );
+        }
       }
     }
     // make vector of lambdas
@@ -93,8 +99,9 @@
     
     
     
-    n_pow = spc_ij.col(0);
-    logAo = spc_ij.col(1);
+    
+    Ao = spc_ij.col(0);
+    n_pow = spc_ij.col(1);
     Eo = spc_ij.col(2);
     vector<Type> mu( n_d );
     
@@ -132,12 +139,14 @@
 
     // Probability of the data
     for( int id=0; id<n_d; id++){
-     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) + logAo( taxa_id( id ) );
+     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) + log(Ao( taxa_id( id ) ));
     }
     
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );
     
     Type jnll = jnll_comp.sum();
+    
+
     
    
     

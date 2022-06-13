@@ -127,7 +127,9 @@ for (i in 1:length(unique.taxa)) {
   if(all.dat$lowest.taxon[taxa.index[1]] =="species")  all.dat$Species[taxa.index] <- lookup.taxa(classificationTree, "Species")
 
 }
+nrow(all.dat)
 
 saveRDS(all.dat, file = "data/alldata_taxonomy.RDS")
-all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
+all.dat2 <- readRDS(file = "data/alldata_taxonomy.RDS")
+nrow(all.dat2)
 
