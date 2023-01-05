@@ -50,7 +50,7 @@ tref <- 12
 all.dat$inv.temp <- (1 / kb)  * ( 1 / (all.dat$Temp + 273.15) - 1 / (tref + 273.15))
 
 ### Fit Models ####
-fit <- glmmTMB(-log(Pcrit) ~  (1 + inv.temp|spc) + inv.temp + log(W), data = all.dat,
+fit <- glmmTMB(-log(Pcrit) ~  diag(1 + inv.temp|spc) + inv.temp + log(W), data = all.dat,
                family = gaussian(link = "identity"),
                se = TRUE
 )

@@ -1,4 +1,4 @@
-# Code to test TMB fitting
+# Code to test TMB fitting - assume n = -0.1
 library(dplyr)
 library(MASS)
 library(TMB)
@@ -35,17 +35,7 @@ all.dat <- dplyr::filter(all.dat, !is.na(W))
 naIndex <- which(is.na(all.dat$Species))
 for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
 
-# get median mass for each species
-species.median.mass <- all.dat %>%
-  group_by(Species) %>%
-  summarize(Wmed = median(W))
-# divide Actual mass by median mass for that species
-for (i in 1:nrow(species.median.mass)) {
-  spc.index <- which(all.dat$Species == species.median.mass$Species[i])
-  all.dat$W[spc.index] <- all.dat$W[spc.index] / species.median.mass$Wmed[i]
-}
-# for species with only 1 mass, replace the NA with 1
-all.dat$W[is.na(all.dat$W)] = 1
+
 # describe the data a bit - how many unique  order per class, families per order, etc.
 class_summary <- all.dat %>%
   group_by(Class) %>%
@@ -77,9 +67,8 @@ if (fish.only) all.dat <- dplyr::filter(all.dat, Class == "Actinopteri")
 kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
-all.dat$Pcrit_atm <- all.dat$Pcrit / 101.325 # convert from KPa to atm
-all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) 
-taxa.list <- c("Order", "Family", "Species")
+all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
+taxa.list <- c("Class", "Order", "Family", "Species")
 
 
 Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
@@ -116,7 +105,7 @@ PC_gz<- as.matrix(ParentChild_gz[, c('ParentRowNumber', 'ChildTaxon')]) - 1
 Taxa_Names = apply( Z_ik, MARGIN=1, FUN=paste, collapse="_")
 g_i = match( Taxa_Names, ParentChild_gz[,'ChildName'] )
 n_k = ncol(Z_ik)
-n_j = 3 # three traits
+n_j = 2 # three traits
 n_g = nrow(ParentChild_gz)
 n_i <- length(g_i)
 
@@ -140,14 +129,14 @@ data <- list(PC_gz = PC_gz,
 )
 
 parameters = list(alpha_j = rep(0,n_j),
-                  L_z = rep(1, 6),
+                  L_z = rep(1, 3),
                   log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
-                  beta_gj = matrix(0, nrow = n_g, ncol = n_j),
+                  beta_gj = matrix(-1, nrow = n_g, ncol = n_j),
                   logsigma = 0
 )
 Random <- c("beta_gj")
 
-model <- "hierarchical_mi"
+model <- "hierarchical_mi_fixed_n"
 compile(paste0("code/TMB/", model, ".cpp"))
 dyn.load(dynlib(paste0("code/TMB/",model)))
 
@@ -169,62 +158,59 @@ re <- summary(rep, "report")
 
 spc_parameters <- re[grep(rownames(re), pattern  = "spc_ij"),1]
 spc_parameters_se <-re[grep(rownames(re), pattern  = "spc_ij"),2]
-spc_ij_mle <- matrix(spc_parameters, nrow = n_i, ncol = 3, byrow = F)
-spc_ij_se <- matrix(spc_parameters_se, nrow = n_i, ncol = 3, byrow = F)
+spc_ij_mle <- matrix(spc_parameters, nrow = n_i, ncol = 2, byrow = F)
+spc_ij_se <- matrix(spc_parameters_se, nrow = n_i, ncol = 2, byrow = F)
 
 
 re <- summary(rep, "random")
-beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 3, byrow = F)
-beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
+beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 2, byrow = F)
+beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 2, byrow = F)
 
 
 ### Plot Estimates ####
 
-OrderEst <- tibble(Order = ParentChild_gz$ChildName[1:31],
-                   Aomle = beta_mle[1:31,1],
-                   Aose = beta_se[1:31,1],
-                   Eomle = beta_mle[1:31,3],
-                   Eose = beta_se[1:31,3],
-                   nmle = beta_mle[1:31,2],
-                   nse = beta_se[1:31, 2])
+ClassEst <- tibble(Class = ParentChild_gz$ChildName[1:11],
+                   Aomle = beta_mle[1:11,1],
+                   Aose = beta_se[1:11,1],
+                   Eomle = beta_mle[1:11,2],
+                   Eose = beta_se[1:11,2]
+                   )
 
 
 
-Aoplot <- plotest(OrderEst, "Ao", "Order")
-Eoplot <- plotest(OrderEst, "Eo", "Order")
-nplot <- plotest(OrderEst, "n", "Order")
-
-grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+Aoplot <- plotest(ClassEst, "Ao", "Class")
+Eoplot <- plotest(ClassEst, "Eo", "Class")
 
 
-### Plot Families ####
-#actinIndex <- grep(x = ParentChild_gz$ParentName, pattern = "\\bActinopteri\\b")
-longFamilyNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==2]
+grid.arrange(Aoplot, Eoplot, ncol = 2)
+
+
+### Plot actinopterygii ####
+actinIndex <- grep(x = ParentChild_gz$ParentName, pattern = "\\bActinopteri\\b")
+longOrderNames <- ParentChild_gz$ChildName[actinIndex]
 
 # Remove all before and up to ":":
-FamilyNames <- gsub(".*_","",longFamilyNames)
+OrderNames <- gsub(".*_","",longOrderNames)
 
-Est <- tibble(Family = FamilyNames,
-                   Aomle = beta_mle[32:84,1],
-                   Aose = beta_se[32:84,1],
-                   Eomle = beta_mle[32:84,3],
-                   Eose = beta_se[32:84,3],
-                   nmle = beta_mle[32:84,2],
-                   nse = beta_se[32:84,2]
+ActinEst <- tibble(Order = OrderNames,
+                   Aomle = beta_mle[actinIndex,1],
+                   Aose = beta_se[actinIndex,1],
+                   Eomle = beta_mle[actinIndex,2],
+                   Eose = beta_se[actinIndex,2]
 )
 
-Aoplot <- plotest(Est, "Ao", "Family")
-Eoplot <- plotest(Est, "Eo", "Family")
-nplot <- plotest(Est, "n", "Family")
+Aoplot <- plotest(ActinEst, "Ao", "Order")
+Eoplot <- plotest(ActinEst, "Eo", "Order")
 
-grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
+grid.arrange(Aoplot, Eoplot, ncol = 2)
 
 # plot all species
-longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==3]
+longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==4]
 SpeciesNames <- gsub(".*_","",longSpeciesNames)
 SpeciesEst <- tibble(Species = SpeciesNames,
-                 Aomle =spc_ij_mle[,1] ,
-                 Aose = spc_ij_se[,1] ,
+                 Aomle =spc_ij_mle[,1],
+                 Aose = spc_ij_se[,1],
                  Eomle = spc_ij_mle[,3],
                  Eose = spc_ij_se[,3],
                  nmle = spc_ij_mle[,2],
@@ -238,10 +224,10 @@ grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 
 ### Compare fits to Penn et al. ####
-#### Convert Ao from kPa to atm
+#### Convert Ao to atm
 
-SpeciesEst$Ao_atm = spc_ij_mle[,1] 
-SpeciesEst$Ao_atm_SE = spc_ij_se[,1] 
+SpeciesEst$Ao_atm = spc_ij_mle[,1] / 101.325
+SpeciesEst$Ao_atm_SE = spc_ij_se[,1] / 101.325
 
 
 #### Load previous fits ####
@@ -259,12 +245,8 @@ for (i in 1:length(unique.species)) {
   aphiaID <- all.dat$AphiaID[all.dat.index]
   penn.index <- which(penn.fits$AphiaID == aphiaID)
   if (length(penn.index) ==1 ) {
-    SpeciesEst$PennAo[i] <- 1 / penn.fits$`Vh (atm)`[penn.index]
+    SpeciesEst$PennAo[i] <- penn.fits$`Vh (atm)`[penn.index]
     SpeciesEst$PennEo[i] <- penn.fits$`Eo (eV)`[penn.index]
   }
 }
-ggplot(SpeciesEst, aes(x = PennAo, y = Aomle)) +
-  geom_point()
 
-ggplot(SpeciesEst, aes(x = PennEo, y = Eomle)) +
-  geom_point()
