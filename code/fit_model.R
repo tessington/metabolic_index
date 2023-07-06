@@ -9,23 +9,42 @@ library(readxl)
 
 ### Functions ####
 find_index <- function(x,y) y <- which(y == x)
-plotest <- function(dataest, trait, groupname) {
-  # make min and max
-  eval(parse(text = paste0("dataest$min <- dataest$", trait,"mle - 
-  dataest$",trait,"se")))
-  eval(parse(text = paste0("dataest$max <- dataest$", trait,"mle + 
-  dataest$",trait,"se")))
+make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
+  
+  group_index <- which(ParentChild_gz$ChildTaxon==level)
+  groupname <- groups[level]
+  GroupNames <- gsub(".*_","",ParentChild_gz$ChildName[group_index])
   
   
-  groupplot <- ggplot(data = dataest, aes_string(x = paste0(trait, "mle"), y = groupname)) +
+  Est <- tibble("{groupname}" := GroupNames,
+                Ao = beta_mle[group_index,1],
+                Aomin = beta_mle[group_index,1] - beta_se[group_index,1],
+                Aomax = beta_mle[group_index,1]  + beta_se[group_index,1],
+                Eo = beta_mle[group_index,3],
+                Eomin = beta_mle[group_index,3] - beta_se[group_index,3],
+                Eomax = beta_mle[group_index,3] + beta_se[group_index,3],
+                n = beta_mle[group_index,2],
+                nmin = beta_mle[group_index,2] - beta_se[group_index,2],
+                nmax = beta_mle[group_index,2] + beta_se[group_index,2],
+  )
+  return(Est)
+}
+
+plotest <- function(dataest, trait, groupname, xmin, xmax) {
+  trait <- enquo(trait)
+  groupname <- enquo(groupname)
+  xmin <- enquo(xmin)
+  xmax <- enquo(xmax)
+  
+  
+  groupplot <- ggplot(data = dataest, aes(x = !!trait, y = !!groupname)) +
     geom_point() +
-    geom_errorbar(aes_string(y = groupname,
-                             xmin = "min",
-                             xmax = "max")
+    geom_errorbar(aes(y = !!groupname,
+                      xmin = !!xmin,
+                      xmax = !!xmax)
     )
   return(groupplot)
 }
-
 ### Generate Evolutionary Trait Structure ####
 
 #### Get taxonomy tree ####
@@ -79,7 +98,7 @@ tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm <- all.dat$Pcrit / 101.325 # convert from KPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) 
-taxa.list <- c("Order", "Family", "Species")
+taxa.list <- c("Class", "Order", "Family", "Species")
 
 
 Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
@@ -180,66 +199,63 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol =
 
 ### Plot Estimates ####
 
-OrderEst <- tibble(Order = ParentChild_gz$ChildName[1:31],
-                   Aomle = beta_mle[1:31,1],
-                   Aose = beta_se[1:31,1],
-                   Eomle = beta_mle[1:31,3],
-                   Eose = beta_se[1:31,3],
-                   nmle = beta_mle[1:31,2],
-                   nse = beta_se[1:31, 2])
 
+ClassEst <- make_df_plot(level = 1, 
+                         beta_mle,
+                         beta_se,
+                         ParentChild_gz,
+                         groups = taxa.list)
 
+Est.2.plot <- ClassEst
+Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
+grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
-Aoplot <- plotest(OrderEst, "Ao", "Order")
-Eoplot <- plotest(OrderEst, "Eo", "Order")
-nplot <- plotest(OrderEst, "n", "Order")
+## Plot Orders #####
+OrderEst <- make_df_plot(level = 2, 
+                         beta_mle,
+                         beta_se,
+                         ParentChild_gz,
+                         groups = taxa.list)
 
+Est.2.plot <- OrderEst
+Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 
 ### Plot Families ####
-#actinIndex <- grep(x = ParentChild_gz$ParentName, pattern = "\\bActinopteri\\b")
-longFamilyNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==2]
-
-# Remove all before and up to ":":
-FamilyNames <- gsub(".*_","",longFamilyNames)
-
-Est <- tibble(Family = FamilyNames,
-                   Aomle = beta_mle[32:84,1],
-                   Aose = beta_se[32:84,1],
-                   Eomle = beta_mle[32:84,3],
-                   Eose = beta_se[32:84,3],
-                   nmle = beta_mle[32:84,2],
-                   nse = beta_se[32:84,2]
-)
-
-Aoplot <- plotest(Est, "Ao", "Family")
-Eoplot <- plotest(Est, "Eo", "Family")
-nplot <- plotest(Est, "n", "Family")
-
+FamilyEst <- make_df_plot(level = 3, 
+                         beta_mle,
+                         beta_se,
+                         ParentChild_gz,
+                         groups = taxa.list)
+Est.2.plot <- FamilyEst
+Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
-# plot all species
-longSpeciesNames <- ParentChild_gz$ChildName[ParentChild_gz[,'ChildTaxon']==3]
-SpeciesNames <- gsub(".*_","",longSpeciesNames)
-SpeciesEst <- tibble(Species = SpeciesNames,
-                 Aomle =spc_ij_mle[,1] ,
-                 Aose = spc_ij_se[,1] ,
-                 Eomle = spc_ij_mle[,3],
-                 Eose = spc_ij_se[,3],
-                 nmle = spc_ij_mle[,2],
-                 nse = spc_ij_se[,2]
-)
-Aoplot <- plotest(SpeciesEst, "Ao", "Species")
-Eoplot <- plotest(SpeciesEst, "Eo", "Species")
-nplot <- plotest(SpeciesEst, "n", "Species")
 
+### Plot Species ####
+SpeciesEst <- make_df_plot(level = 4, 
+                          beta_mle,
+                          beta_se,
+                          ParentChild_gz,
+                          groups = taxa.list)
+Est.2.plot <- SpeciesEst
+Aoplot <- plotest(Est.2.plot, Ao, Species, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Species, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Species, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+
 
 
 ### Compare fits to Penn et al. ####
 #### Convert Ao from kPa to atm
-
+SpeciesEst <- Est
 SpeciesEst$Ao_atm = spc_ij_mle[,1] 
 SpeciesEst$Ao_atm_SE = spc_ij_se[,1] 
 
@@ -263,8 +279,30 @@ for (i in 1:length(unique.species)) {
     SpeciesEst$PennEo[i] <- penn.fits$`Eo (eV)`[penn.index]
   }
 }
-ggplot(SpeciesEst, aes(x = PennAo, y = Aomle)) +
+ggplot(SpeciesEst, aes(x = PennAo, y = Ao)) +
   geom_point()
 
-ggplot(SpeciesEst, aes(x = PennEo, y = Eomle)) +
+ggplot(SpeciesEst, aes(x = PennEo, y = Eo)) +
   geom_point()
+
+### Make Sigma ####
+# Make Sigma
+L <- matrix(0, nrow = n_j, ncol = n_j)
+# extract L_z
+fixef <- rep
+fixed_names <- rownames(fixef)
+
+L_z <- fixef[grep("L_z", fixed_names),1]
+Count = 1
+for (i in 1 : n_j) {
+  for (j in 1 : n_j) {
+    if (i>=j) {
+      L[i,j] <- L_z[Count,1]
+      Count <- Count + 1
+    }
+  }
+}
+
+sigma <- L %*% t(L)
+
+log_lambda <- fixef[grep("log_lambda",fixed_names),1]
