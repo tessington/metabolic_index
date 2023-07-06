@@ -148,6 +148,7 @@ g_i_i <- sapply(FUN = find_index, X = g_i_dat, y = g_i)
 # Create index of species to Parent  - Child
 spc_in_PC_gz <- which(PC_gz[,2] == max(PC_gz[,2]))
 
+# Setup TMB ####
 data <- list(PC_gz = PC_gz,
              g_i = g_i - 1,
              invtemp = all.dat$inv.temp,
