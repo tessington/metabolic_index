@@ -5,7 +5,8 @@ library(TMB)
 library(ggplot2)
 library(gridExtra)
 library(readxl)
-
+library(Matrix)
+library(mvtnorm)
 
 ### Functions ####
 find_index <- function(x,y) y <- which(y == x)
@@ -182,7 +183,8 @@ obj <-
   )
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
-                getReportCovariance = FALSE)
+                getReportCovariance = TRUE, 
+                getJointPrecision=TRUE)
 summary(rep, "fixed")
 re <- summary(rep, "report")
 
@@ -194,6 +196,7 @@ spc_ij_se <- matrix(spc_parameters_se, nrow = n_i, ncol = 3, byrow = F)
 
 
 re <- summary(rep, "random")
+fixef <- summary(rep, "fixed")
 beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 3, byrow = F)
 beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
 
@@ -286,13 +289,13 @@ ggplot(SpeciesEst, aes(x = PennEo, y = Eo)) +
   geom_point()
 
 ### Make Sigma ####
-# Make Sigma
+#### Make empty Cholesky Matrix ####
 L <- matrix(0, nrow = n_j, ncol = n_j)
 # extract L_z
-fixef <- rep$par.fixed
-fixed_names <- names(fixef)
+fixed_names <- rownames(fixef)
 
-L_z <- fixef[grep("L_z", fixed_names)]
+L_z <- fixef[grep("L_z", fixed_names),1]
+#### Fill iin Cholesky Matrix ####
 Count = 1
 for (i in 1 : n_j) {
   for (j in 1 : n_j) {
@@ -303,6 +306,52 @@ for (i in 1 : n_j) {
   }
 }
 
+##### Calculate Sigma and extract log_lambdas
 sigma <- L %*% t(L)
+log_lambda <- fixef[grep("log_lambda",fixed_names),]
 
-log_lambda <- fixef[grep("log_lambda",fixed_names)]
+# Function to simulate draws from mvnormal given precision matrix ####
+rmvnorm_prec <- function(mu, prec, n.sims, random_seed ) {
+  set.seed( random_seed )
+  z = matrix(rnorm(length(mu) * n.sims), ncol=n.sims)
+  L = Matrix::Cholesky(prec, super=TRUE)
+  z = Matrix::solve(L, z, system = "Lt") ## z = Lt^-1 %*% z
+  z = Matrix::solve(L, z, system = "Pt") ## z = Pt    %*% z
+  z = as.matrix(z)
+  return(mu + z)
+}
+
+nsims <- 1000
+sim_beta_actinop <- matrix(NA, nrow = nsims, ncol = 3)
+sim_beta_species <- matrix(NA, nrow = nsims, ncol = 3)
+actinop_index <- which(ClassEst$Class == "Actinopteri")
+
+for (i in 1:nsims) {
+  # simulate new parameters 
+  newpar = rmvnorm_prec( mu=obj$env$last.par.best, prec=rep$jointPrecision, n.sims=1, random_seed = sample(1:100000, 1))[,1]
+  parnames <- names(obj$env$last.par.best)
+  # extract the simulated beta_gj
+  beta_gj_random <-newpar[grep(parnames, pattern = "beta_gj")]
+  # assign beta_gj to Ao, no, and Eo matrixes
+  Ao_sim <- beta_gj_random[1:n_g]
+  no_sim <- beta_gj_random[(n_g +1): (2 * n_g) ]
+  Eo_sim <- beta_gj_random[(2 * n_g + 1) : (3 * n_g)]
+  
+  # save results to sim_beta_actinop
+  sim_beta_actinop[i,1] <- Ao_sim[actinop_index]
+  sim_beta_actinop[i,2] <- no_sim[actinop_index]
+  sim_beta_actinop[i,3] <- Eo_sim[actinop_index]
+  
+  # using random draw for Actinopteri, simulate mean for a random order, random family, and then the value for a given species
+  sim_beta_actinop_ord <- sim_beta_actinop[i,] + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[1]) * sigma)
+  sim_beta_actinop_fam <- sim_beta_actinop_ord + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[2]) * sigma)
+  sim_beta_actinop_spc <- sim_beta_actinop_fam + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[3]) * sigma)
+  # Save the species result into matrix
+  sim_beta_species[i,] <- sim_beta_actinop_spc
+}
+
+apply(X = sim_beta_species, FUN = mean, MAR = 2)
+apply(X = sim_beta_species, FUN = sd, MAR = 2)
+
+
+hist(sim_beta_species[,3], breaks = 20)
