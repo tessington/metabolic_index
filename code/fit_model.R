@@ -208,9 +208,9 @@ ClassEst <- make_df_plot(level = 1,
                          groups = taxa.list)
 
 Est.2.plot <- ClassEst
-Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
-Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
-nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
+Aoplot <- plotest(Est.2.plot, Ao, Class, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Class, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 ## Plot Orders #####
@@ -221,9 +221,9 @@ OrderEst <- make_df_plot(level = 2,
                          groups = taxa.list)
 
 Est.2.plot <- OrderEst
-Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
-Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
-nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
+Aoplot <- plotest(Est.2.plot, Ao, Order, Aomin, Aomax)
+Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
+nplot <- plotest(Est.2.plot, n, Order, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 
@@ -256,7 +256,6 @@ grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 ### Compare fits to Penn et al. ####
 #### Convert Ao from kPa to atm
-SpeciesEst <- Est
 SpeciesEst$Ao_atm = spc_ij_mle[,1] 
 SpeciesEst$Ao_atm_SE = spc_ij_se[,1] 
 
@@ -290,15 +289,15 @@ ggplot(SpeciesEst, aes(x = PennEo, y = Eo)) +
 # Make Sigma
 L <- matrix(0, nrow = n_j, ncol = n_j)
 # extract L_z
-fixef <- rep
-fixed_names <- rownames(fixef)
+fixef <- rep$par.fixed
+fixed_names <- names(fixef)
 
-L_z <- fixef[grep("L_z", fixed_names),1]
+L_z <- fixef[grep("L_z", fixed_names)]
 Count = 1
 for (i in 1 : n_j) {
   for (j in 1 : n_j) {
     if (i>=j) {
-      L[i,j] <- L_z[Count,1]
+      L[i,j] <- L_z[Count]
       Count <- Count + 1
     }
   }
@@ -306,4 +305,4 @@ for (i in 1 : n_j) {
 
 sigma <- L %*% t(L)
 
-log_lambda <- fixef[grep("log_lambda",fixed_names),1]
+log_lambda <- fixef[grep("log_lambda",fixed_names)]
