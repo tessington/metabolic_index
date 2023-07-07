@@ -321,17 +321,21 @@ rmvnorm_prec <- function(mu, prec, n.sims, random_seed ) {
   return(mu + z)
 }
 
-nsims <- 1000
-sim_beta_actinop <- matrix(NA, nrow = nsims, ncol = 3)
-sim_beta_species <- matrix(NA, nrow = nsims, ncol = 3)
+n.sims <- 10000
+sim_beta_actinop <- matrix(NA, nrow = n.sims, ncol = 3)
+sim_beta_species <- matrix(NA, nrow = n.sims, ncol = 3)
 actinop_index <- which(ClassEst$Class == "Actinopteri")
+newpar = rmvnorm_prec( mu = obj$env$last.par.best,
+                       prec = rep$jointPrecision, 
+                       n.sims = n.sims,
+                       random_seed = sample(1:1000000, 1))
 
-for (i in 1:nsims) {
+for (i in 1:n.sims) {
   # simulate new parameters 
-  newpar = rmvnorm_prec( mu=obj$env$last.par.best, prec=rep$jointPrecision, n.sims=1, random_seed = sample(1:100000, 1))[,1]
+  newpar_i <- newpar[,i] 
   parnames <- names(obj$env$last.par.best)
   # extract the simulated beta_gj
-  beta_gj_random <-newpar[grep(parnames, pattern = "beta_gj")]
+  beta_gj_random <-newpar_i[grep(parnames, pattern = "beta_gj")]
   # assign beta_gj to Ao, no, and Eo matrixes
   Ao_sim <- beta_gj_random[1:n_g]
   no_sim <- beta_gj_random[(n_g +1): (2 * n_g) ]
@@ -348,10 +352,20 @@ for (i in 1:nsims) {
   sim_beta_actinop_spc <- sim_beta_actinop_fam + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[3]) * sigma)
   # Save the species result into matrix
   sim_beta_species[i,] <- sim_beta_actinop_spc
+  #sim_beta_species[i,] <- c(Ao_sim[actinop_index], no_sim[actinop_index], Eo_sim[actinop_index])
 }
-
-apply(X = sim_beta_species, FUN = mean, MAR = 2)
-apply(X = sim_beta_species, FUN = sd, MAR = 2)
 
 
 hist(sim_beta_species[,3], breaks = 20)
+
+sim_beta_df <- tibble(Ao = sim_beta_species[,1],
+                           Eo = sim_beta_species[,3],
+                           n = sim_beta_species[,2])
+
+
+d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) + 
+  geom_density_2d_filled( stat = "density_2d_filled", h = c(0.75, 0.15),
+                          show.legend = F) +
+  xlim(1.5, 5.5) + 
+  ylim(0, 0.8)
+print(d)  
