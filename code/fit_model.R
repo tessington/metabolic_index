@@ -1,4 +1,4 @@
-# Code to test TMB fitting
+# Code fit hierarchical model to Arrenhius Equation
 library(dplyr)
 library(MASS)
 library(TMB)
@@ -39,11 +39,13 @@ plotest <- function(dataest, trait, groupname, xmin, xmax) {
   
   
   groupplot <- ggplot(data = dataest, aes(x = !!trait, y = !!groupname)) +
-    geom_point() +
+    geom_point() + 
+    scale_y_discrete(limits = rev) +
     geom_errorbar(aes(y = !!groupname,
                       xmin = !!xmin,
                       xmax = !!xmax)
-    )
+    ) 
+  
   return(groupplot)
 }
 ### Generate Evolutionary Trait Structure ####
@@ -69,17 +71,17 @@ all.dat$W[is.na(all.dat$W)] = 1
 # describe the data a bit - how many unique  order per class, families per order, etc.
 class_summary <- all.dat %>%
   group_by(Class) %>%
-  summarise(NoOrder = length(unique(Order)))
+  summarise(NoOrder = length(unique(Order)), NoFamily = length(unique(Family)),  NoSpecies = length(unique(Species)))
 print(class_summary, n = 30)
 
 order_summary <- all.dat %>%
-  group_by(Order) %>%
-  summarise(NoFamily = length(unique(Family)))
+  group_by(Order, Class) %>%
+  summarise(NoFamily = length(unique(Family)), NoSpecies = length(unique(Species)))
 print(order_summary, n = 50)
 
 family_summary <- all.dat %>%
-  group_by(Family) %>%
-  summarise(NoGenus = length(unique(Genera)))
+  group_by(Family, Order) %>%
+  summarise(NoGenus = length(unique(Genera)), NoSpecies= length(unique(Species)))
 print(family_summary, n = 70)
 
 rem.classes <- FALSE
@@ -202,7 +204,7 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol =
 
 
 ### Plot Estimates ####
-
+#### Plot Class Estimates ####
 
 ClassEst <- make_df_plot(level = 1, 
                          beta_mle,
@@ -210,40 +212,44 @@ ClassEst <- make_df_plot(level = 1,
                          ParentChild_gz,
                          groups = taxa.list)
 
-Est.2.plot <- ClassEst
+Est.2.plot <- merge(ClassEst, class_summary)
+Est.2.plot <- dplyr::filter(Est.2.plot, NoSpecies >=3)
 Aoplot <- plotest(Est.2.plot, Ao, Class, Aomin, Aomax)
 Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Class, nmin, nmax)
-grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+grid.arrange(Aoplot, Eoplot, ncol = 2)
 
-## Plot Orders #####
+#### Plot Orders #####
+
 OrderEst <- make_df_plot(level = 2, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,
                          groups = taxa.list)
 
-Est.2.plot <- OrderEst
+OrderEst <- merge(OrderEst, order_summary)
+Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=3)
 Aoplot <- plotest(Est.2.plot, Ao, Order, Aomin, Aomax)
 Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Order, nmin, nmax)
-grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+grid.arrange(Aoplot, Eoplot, ncol = 2)
 
 
-### Plot Families ####
+#### Plot Families ####
 FamilyEst <- make_df_plot(level = 3, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,
                          groups = taxa.list)
-Est.2.plot <- FamilyEst
+FamilyEst <- merge(FamilyEst, family_summary)
+Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
 Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
 Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
-grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
+grid.arrange(Aoplot, Eoplot, ncol = 2)
 
 
-### Plot Species ####
+#### Plot Species ####
 SpeciesEst <- make_df_plot(level = 4, 
                           beta_mle,
                           beta_se,
@@ -322,50 +328,182 @@ rmvnorm_prec <- function(mu, prec, n.sims, random_seed ) {
 }
 
 n.sims <- 10000
-sim_beta_actinop <- matrix(NA, nrow = n.sims, ncol = 3)
-sim_beta_species <- matrix(NA, nrow = n.sims, ncol = 3)
-actinop_index <- which(ClassEst$Class == "Actinopteri")
-newpar = rmvnorm_prec( mu = obj$env$last.par.best,
-                       prec = rep$jointPrecision, 
-                       n.sims = n.sims,
-                       random_seed = sample(1:1000000, 1))
 
-for (i in 1:n.sims) {
-  # simulate new parameters 
-  newpar_i <- newpar[,i] 
+sim_spc_in_group <- function(obj, 
+                             rep,
+                             n.sims, 
+                             ParentChild_gz, 
+                             Group, 
+                             GroupEst, 
+                             level, 
+                             log_lambda,
+                             sigma) {
+  
+  sim_beta_group <- matrix(NA, nrow = n.sims, ncol = 3)
+  sim_beta_species <- matrix(NA, nrow = n.sims, ncol = 3)
+  group_index <- which(GroupEst[1] == Group)
+  
+  # get random draws for all random variables
+  newpar = rmvnorm_prec( mu = obj$env$last.par.best,
+                         prec = rep$jointPrecision, 
+                         n.sims = n.sims,
+                         random_seed = sample(1:1000000, 1))
+  
+  
   parnames <- names(obj$env$last.par.best)
+  
   # extract the simulated beta_gj
-  beta_gj_random <-newpar_i[grep(parnames, pattern = "beta_gj")]
+  beta_gj_random <-newpar[grep(parnames, pattern = "beta_gj"),]
   # assign beta_gj to Ao, no, and Eo matrixes
-  Ao_sim <- beta_gj_random[1:n_g]
-  no_sim <- beta_gj_random[(n_g +1): (2 * n_g) ]
-  Eo_sim <- beta_gj_random[(2 * n_g + 1) : (3 * n_g)]
+  class_index <- which(ParentChild_gz$ChildTaxon == 1)
+  order_index <-  which(ParentChild_gz$ChildTaxon == 2)
+  family_index <-  which(ParentChild_gz$ChildTaxon == 3)
+  species_index <- which(ParentChild_gz$ChildTaxon == 4)
+  n_gcj <- length(class_index)
+  n_goj <- length(order_index)
+  n_gfj <- length(family_index)
+  n_gj <- length(species_index)
   
-  # save results to sim_beta_actinop
-  sim_beta_actinop[i,1] <- Ao_sim[actinop_index]
-  sim_beta_actinop[i,2] <- no_sim[actinop_index]
-  sim_beta_actinop[i,3] <- Eo_sim[actinop_index]
+  # make an array for looking things up
+  lookup_array <- c(rep("Ao_class", n_gcj),
+                    rep("Ao_order", n_goj),
+                    rep("Ao_family", n_gfj),
+                    rep("Ao_species", n_gj),
+                    rep("n_class", n_gcj),
+                    rep("n_order", n_goj),
+                    rep("n_family", n_gfj),
+                    rep("n_species", n_gj),
+                    rep("Eo_class", n_gcj),
+                    rep("Eo_order", n_goj),
+                    rep("Eo_family", n_gfj),
+                    rep("Eo_species", n_gj)
+  )
   
-  # using random draw for Actinopteri, simulate mean for a random order, random family, and then the value for a given species
-  sim_beta_actinop_ord <- sim_beta_actinop[i,] + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[1]) * sigma)
-  sim_beta_actinop_fam <- sim_beta_actinop_ord + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[2]) * sigma)
-  sim_beta_actinop_spc <- sim_beta_actinop_fam + rmvnorm(n = 1, mean = rep(0,3), sigma = exp(log_lambda[3]) * sigma)
+  
+  allgroups <- c("class", "order", "family")
+  # Put all estimates for the corresponding taxonomic level into a matrix, 
+  # each row is a group at that level, columns are random draws
+  
+  Ao_sim <- beta_gj_random[which(lookup_array == paste0("Ao_", allgroups[level])), ]
+  no_sim <- beta_gj_random[which(lookup_array == paste0("n_", allgroups[level])), ]
+  Eo_sim <- beta_gj_random[which(lookup_array == paste0("Eo_", allgroups[level])), ]
+  
+  # save results to sim_beta_class by looking up corresponding row
+  
+  sim_beta_group[,1] <- c(Ao_sim[group_index,])
+  sim_beta_group[,2] <- c(no_sim[group_index,])
+  sim_beta_group[,3] <- c(Eo_sim[group_index,])
+  
+  # using random draw for Class, simulate mean for a random order, random family, and then the value for a given species
+  if (level ==1) {
+    sim_beta_ord <- sim_beta_group + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[1]) * sigma)}
+  if (level == 2) sim_beta_ord <- sim_beta_group
+  if (level <=2) sim_beta_fam <- sim_beta_ord + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[2]) * sigma)
+  if (level ==3) sim_beta_fam <- sim_beta_group
+  sim_beta_species <- sim_beta_fam + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[3]) * sigma)
   # Save the species result into matrix
-  sim_beta_species[i,] <- sim_beta_actinop_spc
+  #sim_beta_species[i,] <- sim_beta_spc
   #sim_beta_species[i,] <- c(Ao_sim[actinop_index], no_sim[actinop_index], Eo_sim[actinop_index])
+  #}
+  sim_beta_df <- tibble(Ao = sim_beta_species[,1],
+                        Eo = sim_beta_species[,3],
+                        n = sim_beta_species[,2],
+                        Group = Group)
+  
+  
+  return(sim_beta_df)
+}
+
+#### Plot All Classess ####
+sim_beta_df <- NULL
+GroupEst <- ClassEst
+ngroups <- nrow(GroupEst)
+for (i in 1:ngroups) {
+  Group.2.use <- GroupEst$Class[i]
+  sim_beta_df_group <- sim_spc_in_group(obj  = obj,
+                                        rep = rep,
+                                        n.sims = n.sims,
+                                        ParentChild_gz = ParentChild_gz,
+                                        Group = Group.2.use ,
+                                        GroupEst = GroupEst,
+                                        level = 1,
+                                        log_lambda = log_lambda, 
+                                        sigma
+  )
+  sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
 }
 
 
-hist(sim_beta_species[,3], breaks = 20)
+d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) + 
+  geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+                          show.legend = F) +
+  xlim(1.5, 5.5) + 
+  ylim(0, 0.8) + 
+  facet_wrap(vars(Group), nrow = 4, ncol = 3)
+print(d)  
 
-sim_beta_df <- tibble(Ao = sim_beta_species[,1],
-                           Eo = sim_beta_species[,3],
-                           n = sim_beta_species[,2])
+d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) + 
+  geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+                          show.legend = F) +
+  xlim(1.5, 5.5) + 
+  ylim(0, 0.8) + 
+  facet_wrap(vars(Group), nrow = 4, ncol = 3)
+print(d)  
+
+#### Plot Orders with at least 3 species ####
+sim_beta_df <- NULL
+redOrderEst <- dplyr::filter(OrderEst, NoSpecies >=3)
+ngroups <- nrow(redOrderEst)
+for (i in 1:ngroups) {
+  Group.2.use <- redOrderEst$Order[i]
+  sim_beta_df_group <- sim_spc_in_group(obj  = obj,
+                                        rep = rep,
+                                  n.sims = n.sims,
+                                  ParentChild_gz = ParentChild_gz,
+                                  Group = Group.2.use ,
+                                  GroupEst = redOrderEst,
+                                  level = 2,
+                                  log_lambda = log_lambda, 
+                                  sigma
+                                  )
+  sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
+}
+  
+
+d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) + 
+  geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+                          show.legend = F) +
+  xlim(1.5, 5.5) + 
+  ylim(0, 0.8) + 
+  facet_wrap(vars(Group), nrow = 2, ncol = 2)
+print(d)  
+
+#### Plot families with at least 2 species ####
+sim_beta_df <- NULL
+redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=2)
+ngroups <- nrow(redFamilyEst)
+for (i in 1:ngroups) {
+  Group.2.use <- redFamilyEst$Family[i]
+  sim_beta_df_group <- sim_spc_in_group(obj  = obj,
+                                        rep = rep,
+                                        n.sims = n.sims,
+                                        ParentChild_gz = ParentChild_gz,
+                                        Group = Group.2.use ,
+                                        GroupEst = redFamilyEst,
+                                        level = 3,
+                                        log_lambda = log_lambda, 
+                                        sigma
+  )
+  sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
+}
 
 
 d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) + 
-  geom_density_2d_filled( stat = "density_2d_filled", h = c(0.75, 0.15),
+  geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                           show.legend = F) +
   xlim(1.5, 5.5) + 
-  ylim(0, 0.8)
+  ylim(-0.1, 1.0) + 
+  facet_wrap(vars(Group), nrow = 4, ncol = 4)
 print(d)  
+
+
