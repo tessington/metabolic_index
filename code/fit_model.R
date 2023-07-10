@@ -480,7 +480,7 @@ print(d)
 
 #### Plot families with at least 2 species ####
 sim_beta_df <- NULL
-redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=2)
+redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=3)
 ngroups <- nrow(redFamilyEst)
 for (i in 1:ngroups) {
   Group.2.use <- redFamilyEst$Family[i]
@@ -503,7 +503,7 @@ d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) +
                           show.legend = F) +
   xlim(1.5, 5.5) + 
   ylim(-0.1, 1.0) + 
-  facet_wrap(vars(Group), nrow = 4, ncol = 4)
+  facet_wrap(vars(Group), nrow = 2, ncol = 2)
 print(d)  
 
 
