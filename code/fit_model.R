@@ -18,9 +18,9 @@ make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   
   
   Est <- tibble("{groupname}" := GroupNames,
-                Ao = beta_mle[group_index,1],
-                Aomin = beta_mle[group_index,1] - beta_se[group_index,1],
-                Aomax = beta_mle[group_index,1]  + beta_se[group_index,1],
+                logAo = beta_mle[group_index,1],
+                logAomin = beta_mle[group_index,1] - beta_se[group_index,1],
+                logAomax = beta_mle[group_index,1]  + beta_se[group_index,1],
                 Eo = beta_mle[group_index,3],
                 Eomin = beta_mle[group_index,3] - beta_se[group_index,3],
                 Eomax = beta_mle[group_index,3] + beta_se[group_index,3],
@@ -99,8 +99,8 @@ if (fish.only) all.dat <- dplyr::filter(all.dat, Class == "Actinopteri")
 kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
-all.dat$Pcrit_atm <- all.dat$Pcrit / 101.325 # convert from KPa to atm
-all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) 
+all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
+all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
 taxa.list <- c("Class", "Order", "Family", "Species")
 
 
@@ -213,8 +213,8 @@ ClassEst <- make_df_plot(level = 1,
                          groups = taxa.list)
 
 Est.2.plot <- merge(ClassEst, class_summary)
-Est.2.plot <- dplyr::filter(Est.2.plot, NoSpecies >=3)
-Aoplot <- plotest(Est.2.plot, Ao, Class, Aomin, Aomax)
+#Est.2.plot <- dplyr::filter(Est.2.plot, NoSpecies >=3)
+Aoplot <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
 Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Class, nmin, nmax)
 grid.arrange(Aoplot, Eoplot, ncol = 2)
@@ -229,7 +229,7 @@ OrderEst <- make_df_plot(level = 2,
 
 OrderEst <- merge(OrderEst, order_summary)
 Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=3)
-Aoplot <- plotest(Est.2.plot, Ao, Order, Aomin, Aomax)
+Aoplot <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
 Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Order, nmin, nmax)
 grid.arrange(Aoplot, Eoplot, ncol = 2)
@@ -243,7 +243,7 @@ FamilyEst <- make_df_plot(level = 3,
                          groups = taxa.list)
 FamilyEst <- merge(FamilyEst, family_summary)
 Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
-Aoplot <- plotest(Est.2.plot, Ao, Family, Aomin, Aomax)
+Aoplot <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
 Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
 grid.arrange(Aoplot, Eoplot, ncol = 2)
@@ -256,7 +256,7 @@ SpeciesEst <- make_df_plot(level = 4,
                           ParentChild_gz,
                           groups = taxa.list)
 Est.2.plot <- SpeciesEst
-Aoplot <- plotest(Est.2.plot, Ao, Species, Aomin, Aomax)
+Aoplot <- plotest(Est.2.plot, logAo, Species, logAomin, logAomax)
 Eoplot <- plotest(Est.2.plot, Eo, Species, Eomin, Eomax)
 nplot <- plotest(Est.2.plot, n, Species, nmin, nmax)
 grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
@@ -288,11 +288,13 @@ for (i in 1:length(unique.species)) {
     SpeciesEst$PennEo[i] <- penn.fits$`Eo (eV)`[penn.index]
   }
 }
-ggplot(SpeciesEst, aes(x = PennAo, y = Ao)) +
-  geom_point()
+ggplot(SpeciesEst, aes(x = PennAo, y = Ao_atm)) +
+  geom_point() + 
+  geom_abline(a = 0, b = 1)
 
 ggplot(SpeciesEst, aes(x = PennEo, y = Eo)) +
-  geom_point()
+  geom_point() + 
+  geom_abline(a = 0, b = 1)
 
 ### Make Sigma ####
 #### Make empty Cholesky Matrix ####
