@@ -6,7 +6,7 @@ date: "2023-07-10"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(dplyr)
 library(MASS)
 library(TMB)
@@ -465,9 +465,9 @@ d <- ggplot(data = sim_beta_df, aes( x = logAo, y = Eo)) +
 print(d)  
 
 ```
-Generally, the middle of the simulated species within Classes are close to the overall mean values (Ao = 3.41, Eo = 0.350), and 95% of species in these classes will fall between 1.95 and 4.88 (Ao) and 0.036 and 0.66 (Eo).
+Generally, the center of the simulated species-level distribution of traits within Classes are close to the overall mean values (Ao = 3.41, Eo = 0.350), and 95% of species in these classes will fall between 1.95 and 4.88 (logAo) and 0.036 and 0.66 (Eo).  Ao is often more easily interpreted as its inverse, which depicts the $pO_{2,crit}$ of a species at the reference temperature (15 C) and at a reference body size.  This, critical $pO_{2,crit}$ will range from 0.00754 atm to 0.1422 atm, and this range is similar among all classes.
 
-There were slight differences among Orders, where only Orders with at least 3 separate species are shown.
+There were slight differences among Orders (only Orders with at least 3 separate species are shown), mostly manifest as slightly different distributions of $\log(A_o)$,but projected ranges of species traits were still largely similar
 
 
 ```{r plotorders, echo = F, fig.cap = "Same plot for Orders that had at least three species represented in the data"}
@@ -501,9 +501,9 @@ print(d)
 
 ```
 
-Slightly larger differences were projected among some families, although many of these groups included only two species (three families had three species represented). Zoocaridae (eelpouts) and Gadidai (cods) had relatively low Ao (or lower tolerance for low $pO2$), while species in the families Penaidae and Triptyrygiidae had a higher Ao.  There was more variability in $E_o$ among families, with estimated temperature dependence being low among Salmonidae and exceptionally high among Penaeidae.
+Slightly larger differences in species-level traits were projected among some families, although many of these groups included only two species (three families had three species represented). Zoocaridae (eelpouts) and Gadidai (cods) had relatively low logAo (or lower tolerance for low $pO2$), while species in the families Penaidae and Triptyrygiidae had a higher logAo (higher tolerance).  There was more variability in $E_o$ among families, with estimated temperature dependence being low among Salmonidae and exceptionally high among Penaeidae.
 
-```{r plotfam, fig.cap = "Same as above but for Family, restricted to Families represented by at least two species"}
+```{r plotfam, echo = F, fig.cap = "Same as above but for Family, restricted to Families represented by at least two species"}
 #### Plot families with at least 2 species ####
 sim_beta_df <- NULL
 redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=2)
@@ -532,11 +532,70 @@ d <- ggplot(data = sim_beta_df, aes( x = logAo, y = Eo)) +
   facet_wrap(vars(Group), nrow = 4, ncol = 4)
 print(d)  
 ```
-# Point 3: Hierarchical model improves estimation through shrinkage
 
-Fitting individual linear model to species-level data typically leads to wider variability of traits than hierarchical models. In other words, the hierarchical model dismisses exceptionally unusual parameter estimates to a species data and "shrinks" those estimates to the Parent group level means.  In essence, this stabilizes parameter estimates.
+## Point 3: most of the trait variation is at lower taxonomic levels
 
-To do: fit each species independently when there are adequate T, W data
+```{r getlambda, echo = F}
+log_lambda_table <- log_lambda
+rownames(log_lambda_table) <- c("Order", "Family", "Species")
+knitr::kable(log_lambda_table, caption = "Estimated (SE) of log-lambdas by taxonomic group")
 
-Note: Cannot recreate parameter estimates in spreadsheet "MI_traits_Est_by_Curtis"
+```
+
+The estimates of $\lambda_{l(j)}$ indicate increasing trait variance with lower taxonomic level, at odds with the interpretation of these terms as the proportion of evolutionary trait variation attribuble to that taxonomic level  This may be either due to:
+
+* localized, species level adaptation to different environments to take advantage of available niches (e.g. deeper and more oxygen depleted habitats)
+
+* differences in experimental protocols among studies that drive many of the differences in estimated $pO_{2,crit}$
+
+
+## Point 4: Hierarchical model improves estimation through shrinkage
+
+Because not all data have mass data (and when present, mass and temperature are often not independent across experiments), I fit individual linear models to each species, using the maximum likelihood estimate of n = -0.078, and assigning an offset of $n \log(W)$ to account for relative body mass.  This was set to 0 when body mass was absent.
+
+
+Fitting individual linear model to species-level data typically leads to wider variability of traits than hierarchical models. In other words, the hierarchical model dismisses exceptionally unusual parameter estimates to a species data and "shrinks" those estimates to the Parent group level means.  In essence, this stabilizes parameter estimates, and may thereby provide a better basis for generating probability distributions of trait values. 
+
+
+```{r compare, echo = F, fig.cap = "Comparison of parameter estimates derived without and with hierarchical models"}
+### Compare fits to individual species ####
+SpeciesEst <- make_df_plot(level = 4, 
+                          beta_mle,
+                          beta_se,
+                          ParentChild_gz,
+                          groups = taxa.list)
+
+#### Add to species the Ao and se
+SpeciesEst$Ao_atm = spc_ij_mle[,1] 
+SpeciesEst$Ao_atm_SE = spc_ij_se[,1] 
+SpeciesEst$Aoind <- NA
+SpeciesEst$Eoind <- NA
+
+
+#### Load previous fits ####
+spc.fits <- readRDS(file = "Data/species_estimates.RDS")
+
+
+for (i in 1:nrow(spc.fits)) {
+  spc.2.use <- tolower(spc.fits$Species[i])
+  spc.index <- which(tolower(SpeciesEst$Species) == spc.2.use)
+  SpeciesEst$Aoind[spc.index] <- exp(spc.fits$logAo[i])
+  SpeciesEst$Eoind[spc.index] <- spc.fits$Eo[i]
+  }
+
+p1 <- ggplot(SpeciesEst, aes(x = Aoind, y = Ao_atm)) +
+  geom_point() + 
+  geom_abline(a = 0, b = 1) +
+  xlab("Ao estimated independently") +
+  ylab("Ao estimated hierarchically")
+
+
+p2 <- ggplot(SpeciesEst, aes(x = Eoind, y = Eo)) +
+  geom_point() + 
+  geom_abline(a = 0, b = 1) + 
+  xlab("Eo estimated independently") +
+  ylab("Eo estimated hierarchically")
+grid.arrange(p1, p2, ncol = 2)
+
+```
 
