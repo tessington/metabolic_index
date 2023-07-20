@@ -263,38 +263,41 @@ grid.arrange(Aoplot, nplot, Eoplot, ncol = 3)
 
 
 
-### Compare fits to Penn et al. ####
-#### Convert Ao from kPa to atm
+### Compare fits to individual species ####
+#### Add to species the Ao and se
 SpeciesEst$Ao_atm = spc_ij_mle[,1] 
 SpeciesEst$Ao_atm_SE = spc_ij_se[,1] 
+SpeciesEst$Aoind <- NA
+SpeciesEst$Eoind <- NA
 
 
 #### Load previous fits ####
-penn.fits <- read_xlsx(path = "data/MI_traits_Est_by_Curtis.xlsx") 
+spc.fits <- readRDS(file = "Data/species_estimates.RDS")
+
 
 # reload the all.dat to be able to retrieve APHIAID for matching
-all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
-SpeciesEst$PennAo <- NA
-SpeciesEst$PennEo <- NA
 
-unique.species <- unique(SpeciesEst$Species)
-for (i in 1:length(unique.species)) {
-  spc.2.use <- tolower(unique.species[i])
-  all.dat.index <- which(all.dat$scientific.name == spc.2.use) [ 1 ]
-  aphiaID <- all.dat$AphiaID[all.dat.index]
-  penn.index <- which(penn.fits$AphiaID == aphiaID)
-  if (length(penn.index) ==1 ) {
-    SpeciesEst$PennAo[i] <- 1 / penn.fits$`Vh (atm)`[penn.index]
-    SpeciesEst$PennEo[i] <- penn.fits$`Eo (eV)`[penn.index]
+
+for (i in 1:nrow(spc.fits)) {
+  spc.2.use <- tolower(spc.fits$Species[i])
+  spc.index <- which(tolower(SpeciesEst$Species) == spc.2.use)
+  SpeciesEst$Aoind[spc.index] <- exp(spc.fits$logAo[i])
+  SpeciesEst$Eoind[spc.index] <- spc.fits$Eo[i]
   }
-}
-ggplot(SpeciesEst, aes(x = PennAo, y = Ao_atm)) +
-  geom_point() + 
-  geom_abline(a = 0, b = 1)
 
-ggplot(SpeciesEst, aes(x = PennEo, y = Eo)) +
+ggplot(SpeciesEst, aes(x = Aoind, y = Ao_atm)) +
   geom_point() + 
-  geom_abline(a = 0, b = 1)
+  geom_abline(a = 0, b = 1) +
+  xlab("Ao estimated independently") +
+  ylab("Ao estimated hierarchically")
+
+
+ggplot(SpeciesEst, aes(x = Eoind, y = Eo)) +
+  geom_point() + 
+  geom_abline(a = 0, b = 1) + 
+  xlab("Eo estimated independently") +
+  ylab("Eo estimated hierarchically")
+
 
 ### Make Sigma ####
 #### Make empty Cholesky Matrix ####
@@ -337,25 +340,42 @@ sim_spc_in_group <- function(obj,
                              ParentChild_gz, 
                              Group, 
                              GroupEst, 
-                             level, 
-                             log_lambda,
-                             sigma) {
-  
+                             level) {
+  # create empy matrices
   sim_beta_group <- matrix(NA, nrow = n.sims, ncol = 3)
   sim_beta_species <- matrix(NA, nrow = n.sims, ncol = 3)
-  group_index <- which(GroupEst[1] == Group)
+  # find row of GroupEst that contains the specific group to simulate
+  group_index <- which(GroupEst[,1] == Group)
   
-  # get random draws for all random variables
+  # get random draws for all variables
   newpar = rmvnorm_prec( mu = obj$env$last.par.best,
                          prec = rep$jointPrecision, 
                          n.sims = n.sims,
                          random_seed = sample(1:1000000, 1))
   
-  
   parnames <- names(obj$env$last.par.best)
-  
   # extract the simulated beta_gj
   beta_gj_random <-newpar[grep(parnames, pattern = "beta_gj"),]
+
+  # extract simulated sigma
+  L_z_random <- obj$env$last.par.best[grep(parnames, pattern = "L_z")]
+  L <- matrix(0, nrow = n_j, ncol = n_j)
+  #### Fill iin Cholesky Matrix ####
+  Count = 1
+  for (i in 1 : n_j) {
+    for (j in 1 : n_j) {
+      if (i>=j) {
+        L[i,j] <- L_z_random[Count]
+        Count <- Count + 1
+      }
+    }
+  }
+  sigma <- L %*% t(L)
+  # extract log_lambda
+  log_lambda_random <- obj$env$last.par.best[grep(parnames, pattern = "log_lambda")]
+  # constrain log_lambda_random[1] - huge standard error is because LL is flat at low values.  Prevent simulating huge values
+  log_lambda_random[1] <- min(-10, log_lambda_random[1])
+  
   # assign beta_gj to Ao, no, and Eo matrixes
   class_index <- which(ParentChild_gz$ChildTaxon == 1)
   order_index <-  which(ParentChild_gz$ChildTaxon == 2)
@@ -383,26 +403,25 @@ sim_spc_in_group <- function(obj,
   
   
   allgroups <- c("class", "order", "family")
+  
   # Put all estimates for the corresponding taxonomic level into a matrix, 
   # each row is a group at that level, columns are random draws
-  
   Ao_sim <- beta_gj_random[which(lookup_array == paste0("Ao_", allgroups[level])), ]
   no_sim <- beta_gj_random[which(lookup_array == paste0("n_", allgroups[level])), ]
   Eo_sim <- beta_gj_random[which(lookup_array == paste0("Eo_", allgroups[level])), ]
   
-  # save results to sim_beta_class by looking up corresponding row
-  
+  # save results to sim_beta_group by looking up corresponding row
   sim_beta_group[,1] <- c(Ao_sim[group_index,])
   sim_beta_group[,2] <- c(no_sim[group_index,])
   sim_beta_group[,3] <- c(Eo_sim[group_index,])
   
-  # using random draw for Class, simulate mean for a random order, random family, and then the value for a given species
+  # using random draw for Class (if level =1), simulate mean for a random order, random family, and then the value for a given species
   if (level ==1) {
-    sim_beta_ord <- sim_beta_group + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[1]) * sigma)}
+    sim_beta_ord <- sim_beta_group + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda_random[1]) * sigma)}
   if (level == 2) sim_beta_ord <- sim_beta_group
-  if (level <=2) sim_beta_fam <- sim_beta_ord + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[2]) * sigma)
+  if (level <=2) sim_beta_fam <- sim_beta_ord + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda_random[2]) * sigma)
   if (level ==3) sim_beta_fam <- sim_beta_group
-  sim_beta_species <- sim_beta_fam + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda[3]) * sigma)
+  sim_beta_species <- sim_beta_fam + rmvnorm(n = n.sims, mean = rep(0,3), sigma = exp(log_lambda_random[3]) * sigma)
   # Save the species result into matrix
   #sim_beta_species[i,] <- sim_beta_spc
   #sim_beta_species[i,] <- c(Ao_sim[actinop_index], no_sim[actinop_index], Eo_sim[actinop_index])
@@ -428,9 +447,7 @@ for (i in 1:ngroups) {
                                         ParentChild_gz = ParentChild_gz,
                                         Group = Group.2.use ,
                                         GroupEst = GroupEst,
-                                        level = 1,
-                                        log_lambda = log_lambda, 
-                                        sigma
+                                        level = 1
   )
   sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
 }
@@ -464,9 +481,7 @@ for (i in 1:ngroups) {
                                   ParentChild_gz = ParentChild_gz,
                                   Group = Group.2.use ,
                                   GroupEst = redOrderEst,
-                                  level = 2,
-                                  log_lambda = log_lambda, 
-                                  sigma
+                                  level = 2
                                   )
   sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
 }
@@ -482,7 +497,7 @@ print(d)
 
 #### Plot families with at least 2 species ####
 sim_beta_df <- NULL
-redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=3)
+redFamilyEst <- dplyr::filter(FamilyEst, NoSpecies >=2)
 ngroups <- nrow(redFamilyEst)
 for (i in 1:ngroups) {
   Group.2.use <- redFamilyEst$Family[i]
@@ -492,9 +507,7 @@ for (i in 1:ngroups) {
                                         ParentChild_gz = ParentChild_gz,
                                         Group = Group.2.use ,
                                         GroupEst = redFamilyEst,
-                                        level = 3,
-                                        log_lambda = log_lambda, 
-                                        sigma
+                                        level = 3
   )
   sim_beta_df <- rbind(sim_beta_df, sim_beta_df_group)
 }
@@ -505,7 +518,7 @@ d <- ggplot(data = sim_beta_df, aes( x = Ao, y = Eo)) +
                           show.legend = F) +
   xlim(1.5, 5.5) + 
   ylim(-0.1, 1.0) + 
-  facet_wrap(vars(Group), nrow = 2, ncol = 2)
+  facet_wrap(vars(Group), nrow = 3, ncol = 5)
 print(d)  
 
 
