@@ -10,10 +10,10 @@ library(mvtnorm)
 library(tmbstan)
 library(shinystan)
 
-## Set the number of random simulations #####
+# Set the number of random simulations #####
 n.sims <- 10000
-### ggplot setup ####
-theme_set(theme_bw(base_size = 14))
+# ggplot setup ####
+theme_set(theme_bw(base_size = 16))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
              strip.background = element_blank())
@@ -23,7 +23,7 @@ source("code/fit_model_funs.R")
 
 # Generate Evolutionary Trait Structure ####
 
-## Get data with  taxonomy tree ####
+# Get data with  taxonomy tree ####
 all.dat <- load_data()
 
 # describe the data a bit - how many unique  order per class, families per order, etc. ####
@@ -43,7 +43,7 @@ family_summary <- all.dat %>%
 print(family_summary, n = 70)
 
 # Setup TMB data and parameters ####
-#### Create new ParentChild matrix for reduced taxonomic structure ####
+
 kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
@@ -51,7 +51,7 @@ all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
 taxa.list <- c("Class", "Order", "Family", "Species")
 
-
+## Create new ParentChild matrix for reduced taxonomic structure ####
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
 ParentChild_gz <- taxa.info$ParentChild_gz
 PC_gz <- taxa.info$PC_gz
@@ -63,7 +63,7 @@ n_g <- taxa.info$n_g
 n_i <- taxa.info$n_i
 spc_in_PC_gz <- taxa.info$spc_in_PC_gz
 
-# Setup TMB ####
+## Setup TMB ####
 data <- list(PC_gz = PC_gz,
              g_i = g_i - 1,
              invtemp = all.dat$inv.temp,
@@ -81,20 +81,18 @@ parameters = list(alpha_j = rep(0,n_j),
                   logsigma = 0
 )
 Random <- c("beta_gj")
-
 model <- "hierarchical_mi"
 compile(paste0("code/TMB/", model, ".cpp"))
 dyn.load(dynlib(paste0("code/TMB/",model)))
 
-# Run TUMB ####
+## Run TUMB ####
 obj <-
   MakeADFun(
     data = data,
     parameters = parameters,
     DLL = model,
     random = Random,
-    silent = TRUE,
-    hessian = TRUE
+    silent = TRUE
   )
 opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
@@ -109,25 +107,16 @@ beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol 
 beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
 
 
-### Plot Estimates ####
-#### Plot Class Estimates ####
 
+# Summarize Estimatess ####
+
+## By Class ####
 ClassEst <- make_df_plot(level = 1, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,
                          groups = taxa.list)
-
-Est.2.plot <- merge(ClassEst, class_summary)
-plot_est <- T
-if (plot_est) {
-Aoplot <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
-Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
-nplot <- plotest(Est.2.plot, n, Class, nmin, nmax)
-grid.arrange(Aoplot, Eoplot, ncol = 2)
-}
-#### Plot Orders #####
-
+## By Order #####
 OrderEst <- make_df_plot(level = 2, 
                          beta_mle,
                          beta_se,
@@ -135,30 +124,51 @@ OrderEst <- make_df_plot(level = 2,
                          groups = taxa.list)
 
 OrderEst <- merge(OrderEst, order_summary)
-Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=3)
-if(plot_est) {
-Aoplot <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
-Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
-nplot <- plotest(Est.2.plot, n, Order, nmin, nmax)
+
+## By Family ####
+FamilyEst <- make_df_plot(level = 3, 
+                          beta_mle,
+                          beta_se,
+                          ParentChild_gz,
+                          groups = taxa.list)
+FamilyEst <- merge(FamilyEst, family_summary)
+
+
+# Plot Estimates ####
+plot_est <- T
+if (plot_est) {
+  ## Plot Classes ####
+  Est.2.plot <- merge(ClassEst, class_summary)
+Aoplot <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
+Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
+nplotclass <- plotest(Est.2.plot, n, Class, nmin, nmax)
+nplotclass <- nplotclass + xlim(c(-0.3, 0.15))
 grid.arrange(Aoplot, Eoplot, ncol = 2)
+## Plot Orders #####
+  Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=2)
+
+  Aoplot <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
+  Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
+  nplotorder <- plotest(Est.2.plot, n, Order, nmin, nmax)
+  nplotorder <- nplotorder + xlim(c(-0.3, 0.15))
+  grid.arrange(Aoplot, Eoplot, ncol = 2)
+  ##Plot Families #####
+  Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
+  Aoplot <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
+  Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+  nplotfamily <- plotest(Est.2.plot, n, Family, nmin, nmax)
+  nplotfamily <- nplotfamily + xlim(c(-0.3, 0.15))
+  grid.arrange(Aoplot, Eoplot, ncol = 2)
+  
+  ## multiplot of n #####
+  grid.arrange(nplotclass, nplotorder, nplotfamily,
+               layout_matrix = rbind(c(1, 3),
+                                     c(2, 3)))
+  
 }
 
-#### Plot Families ####
-FamilyEst <- make_df_plot(level = 3, 
-                         beta_mle,
-                         beta_se,
-                         ParentChild_gz,
-                         groups = taxa.list)
-FamilyEst <- merge(FamilyEst, family_summary)
-Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
-if (plot_est) {
-Aoplot <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
-Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
-nplot <- plotest(Est.2.plot, n, Family, nmin, nmax)
-grid.arrange(Aoplot, Eoplot, ncol = 2)
-}
-### Compare fits to individual species ####
-#### Add to species the Ao and se
+# Compare fits to individual species ####
+## Add to species the Ao and se ####
 SpeciesEst <- make_df_plot(level = 4, 
                          beta_mle,
                          beta_se,
@@ -170,19 +180,26 @@ SpeciesEst$Aoind <- NA
 SpeciesEst$Eoind <- NA
 
 
-#### Load previous fits ####
+## Load previous fits ####
 spc.fits <- readRDS(file = "analysis/species_estimates.RDS")
-# reload the all.dat to be able to retrieve APHIAID for matching
 
+## Combine into one df ####
 for (i in 1:nrow(spc.fits)) {
   spc.2.use <- tolower(spc.fits$Species[i])
   spc.index <- which(tolower(SpeciesEst$Species) == spc.2.use)
   SpeciesEst$Aoind[spc.index] <- exp(spc.fits$logAo[i])
   SpeciesEst$Eoind[spc.index] <- spc.fits$Eo[i]
   }
+## Make Plot ####
+aoplot <- ggplot(SpeciesEst, aes(x = Aoind, y = Ao_atm)) +
+  geom_point(size = 2.5) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.25) +
+  xlab(expression("A"[o]~ "estimated independently")) +
+         ylab(expression("A"[o]~ "estimated hierarchically"))
 
-ggplot(SpeciesEst, aes(x = Aoind, y = Ao_atm)) +
-  geom_point() + 
-  geom_abline(a = 0, b = 1) +
-  xlab("Ao estimated independently") +
-  ylab("Ao estimated hierarchically")
+eoplot <- ggplot(SpeciesEst, aes(x = Eoind, y = Eo)) +
+  geom_point(size = 2.5) + 
+  geom_abline(intercept = 0, slope = 1, linewidth = 1.25) +
+  xlab(expression("E"[o]~ "estimated independently")) +
+  ylab(expression("E"[o]~ "estimated hierarchically"))
+grid.arrange(aoplot, eoplot, ncol = 2)
