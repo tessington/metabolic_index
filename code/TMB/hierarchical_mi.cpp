@@ -146,10 +146,6 @@
     
     Type jnll = jnll_comp.sum();
     
-
-    
-   
-    
     // Return jnll
     // Add Reports
     ADREPORT(spc_ij);
