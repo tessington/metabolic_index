@@ -34,11 +34,6 @@ n_i <- taxa.info$n_i
 spc_in_PC_gz <- taxa.info$spc_in_PC_gz
 
 # Run TUMB ####
-run_new_tmb <- F
-if (run_new_tmb) {
-  # Setup TMB data and parameters ####
-  
-  
   # Setup TMB ####
   data <- list(PC_gz = PC_gz,
                g_i = g_i - 1,
@@ -76,17 +71,17 @@ if (run_new_tmb) {
                   getJointPrecision=TRUE)
   saveRDS(file = "analysis/modelfit_stan.RDS",list(obj = obj, opt = opt, rep = rep))
 
-set.seed(789)
+set.seed(7891)
 rstan_options(auto_write = TRUE)  # this option stops Stan from re-compiling if not necessary
 options(mc.cores = parallel::detectCores())
 sims <- tmbstan(
   obj,
   chains = 5,
-  iter = 10500,
+  iter = 11000,
   init = obj$env$last.par.best,
   cores = 5,
   thin = 50,
-  warmup = floor(500),
+  warmup = floor(1000),
   control = list(
     adapt_engaged = TRUE,
     adapt_delta = 0.95,

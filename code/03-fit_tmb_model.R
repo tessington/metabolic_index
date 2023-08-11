@@ -10,8 +10,7 @@ library(mvtnorm)
 library(tmbstan)
 library(shinystan)
 
-# Set the number of random simulations #####
-n.sims <- 10000
+
 # ggplot setup ####
 theme_set(theme_bw(base_size = 16))
 theme_update(panel.grid.major = element_blank(), 
