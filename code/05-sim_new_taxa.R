@@ -59,13 +59,12 @@ sim_betas <- sim_taxa(obj = obj,
                                  unique(all.dat$Order),
                                  unique(all.dat$Family),
                                  unique(all.dat$Species)
-                                 ),
-                      runMCMC = F
+                                 )
                       )
 
 # Plot by class ####
 # include in this plot "Other Class" for out of sample
-na.index <- which(sim_betas$Gr)
+
  dclass<-  ggplot(data =dplyr::filter(sim_betas, level == 1),
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
@@ -78,7 +77,7 @@ na.index <- which(sim_betas$Gr)
                 col = "black") +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 3, ncol = 4)
+   facet_wrap(vars(Group), nrow = 4, ncol = 4)
  dclass
  
  # plot by order ####
@@ -113,6 +112,8 @@ na.index <- which(sim_betas$Gr)
                 col = "black") +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 3, ncol = 5)
+   facet_wrap(vars(Group), nrow = 4, ncol = 4)
  dfamily
+ 
+ saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  

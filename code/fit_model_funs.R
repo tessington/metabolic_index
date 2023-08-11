@@ -217,9 +217,10 @@ return(list(ParentChild_gz = ParentChild_gz,
 
 load_data <- function() {
   all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
-  # remove data where there is no body size data
-  all.dat <- dplyr::filter(all.dat, !is.na(W))
-  naIndex <- which(is.na(all.dat$Species))
+  # remove set W = 1 if there is no body size data
+  all.dat$W[which(is.na(all.dat$W))] <- 1
+# when a species isn't listed, make a genus_spp.
+    naIndex <- which(is.na(all.dat$Species))
   for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
   
   # get median mass for each species

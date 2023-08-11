@@ -1,7 +1,9 @@
 # metabolic_index
 Code for running phylogenetic trait analysis on metabolic index parameters.
 
-All R files to run are in subdirectory "code"
+To extract simulations for a taxa, go to the lookup_taxa sub directory and open file "lookup_taxa.R".  There you can specify the taxonomic group, and source the file to see simulation medians, standard deviations, and variance - covariance matrix of metabolic index tratis
+
+All working R files are in subdirectory "code"
 - 01-configure-mi-data.R.  Adds the taxonomic information by accessing the World Register of Marine Species.  Does not need to be run, as results have been generated and saved in /data/alldata_taxonomy.RDS
 - 02-fit-individual-species.R. Runs linear models individually for each species.  Does not need to be run, as results have been generated and saved in analysis/species_estimates.RDS
 - 03-fit_TMB_model.R.  Runs Hierarchical model using TMB, and plots results for taxonomic groups. Also includes summary of data coverage by taxonomic group.
