@@ -168,7 +168,7 @@ grid.arrange(Aoplot, Eoplot, ncol = 2)
 
 # Compare fits to individual species ####
 ## Add to species the Ao and se ####
-SpeciesEst <- make_df_plot(level = 4, 
+SpeciesEst <- make_species_df(level = 4, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,
@@ -202,3 +202,6 @@ eoplot <- ggplot(SpeciesEst, aes(x = Eoind, y = Eo)) +
   xlab(expression("E"[o]~ "estimated independently")) +
   ylab(expression("E"[o]~ "estimated hierarchically"))
 grid.arrange(aoplot, eoplot, ncol = 2)
+
+# save species - level estimates 
+write.csv(x = SpeciesEst, "analysis/species_estimates.csv", row.names = F)
