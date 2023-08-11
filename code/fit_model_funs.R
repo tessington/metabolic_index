@@ -21,6 +21,25 @@ make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   return(Est)
 }
 
+make_species_df <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
+  
+  group_index <- which(ParentChild_gz$ChildTaxon==level)
+  groupname <- groups[level]
+  GroupNames <- gsub(".*_","",ParentChild_gz$ChildName[group_index])
+  
+  
+  Est <- tibble("{groupname}" := GroupNames,
+                logAo = beta_mle[group_index,1],
+                logAoSE = beta_se[group_index,1],
+                Eo = beta_mle[group_index,3],
+                EoSE = beta_se[group_index,3],
+                n = beta_mle[group_index,2],
+                nSE = beta_se[group_index,2],
+                
+  )
+  return(Est)
+}
+
 plotest <- function(dataest, trait, groupname, xmin, xmax) {
   trait <- enquo(trait)
   groupname <- enquo(groupname)
