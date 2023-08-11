@@ -9,13 +9,15 @@ library(Matrix)
 library(mvtnorm)
 library(tmbstan)
 library(shinystan)
-
+library(egg)
 
 # ggplot setup ####
 theme_set(theme_bw(base_size = 16))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
-             strip.background = element_blank())
+             strip.background = element_blank(),
+             axis.text = element_text(color = "black")
+             )
 
 # load functions ####
 source("code/fit_model_funs.R")
@@ -138,31 +140,72 @@ plot_est <- T
 if (plot_est) {
   ## Plot Classes ####
   Est.2.plot <- merge(ClassEst, class_summary)
-Aoplot <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
-Eoplot <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
+Aoplotc <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
+Aoplotc <- Aoplotc + xlab(expression("log(A"[o]~ ")"))
+Eoplotc <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
+Eoplotc <- Eoplotc + theme(axis.text.y = element_blank(),
+                           axis.title.y = element_blank()) +
+  xlab(expression("E"[o]))
+
+class_plot <- ggarrange(Aoplotc, 
+          Eoplotc,
+          nrow = 1)
+
 nplotclass <- plotest(Est.2.plot, n, Class, nmin, nmax)
 nplotclass <- nplotclass + xlim(c(-0.3, 0.15))
-grid.arrange(Aoplot, Eoplot, ncol = 2)
+
 ## Plot Orders #####
   Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=2)
-
-  Aoplot <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
-  Eoplot <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
+  Aoploto <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
+  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")"))
+  Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
+  Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
+                             axis.title.y = element_blank()
+                             )  +
+    xlab(expression("E"[o]))
+  
   nplotorder <- plotest(Est.2.plot, n, Order, nmin, nmax)
   nplotorder <- nplotorder + xlim(c(-0.3, 0.15))
-  grid.arrange(Aoplot, Eoplot, ncol = 2)
+  
+  order_plot <- ggarrange(Aoploto, 
+                          Eoploto,
+                          nrow = 1)
+  
   ##Plot Families #####
   Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
-  Aoplot <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
-  Eoplot <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+  Aoplotf <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
+  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")"))
+  Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
+  Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
+                             axis.title.y = element_blank()
+                             )  +
+    xlab(expression("E"[o]))
   nplotfamily <- plotest(Est.2.plot, n, Family, nmin, nmax)
   nplotfamily <- nplotfamily + xlim(c(-0.3, 0.15))
-  grid.arrange(Aoplot, Eoplot, ncol = 2)
+family_plot <-  ggarrange(Aoplotf, 
+                          Eoplotf,
+                          nrow = 1)
+
   
+## Multi plot of class, order and family
+pdf(file = "figures/class_and_order.pdf",
+    width = 10,
+    height = 8)
+grid.arrange(class_plot, order_plot, family_plot,
+             layout_matrix = rbind(c(1, 1, 2, 2),
+                                   c(NA,3,3,NA))
+)
+dev.off()
+
   ## multiplot of n #####
+pdf(file = "figures/n_class_order_family.pdf",
+    width = 10,
+    height = 8)
+    
   grid.arrange(nplotclass, nplotorder, nplotfamily,
                layout_matrix = rbind(c(1, 3),
                                      c(2, 3)))
+  dev.off()
   
 }
 

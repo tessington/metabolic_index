@@ -69,15 +69,14 @@ sim_betas <- sim_taxa(obj = obj,
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-   xlim(1.5, 5.5) + 
-   ylim(-0.10, 0.8) + 
-   stat_ellipse(type = "norm",
+  xlim(1.5, 5.5) + 
+  ylim(-0.25, 0.85) +  stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
                 col = "black") +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 4, ncol = 4)
+   facet_wrap(vars(Group), nrow = 3, ncol = 5)
  dclass
  
  # plot by order ####
@@ -87,15 +86,15 @@ sim_betas <- sim_taxa(obj = obj,
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-   xlim(1.5, 5.5) + 
-   ylim(-0.10, 0.8) + 
-   stat_ellipse(type = "norm",
+    xlim(1.5, 5.5) + 
+    ylim(-0.25, 0.85) + 
+    stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
                 col = "black") +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 3, ncol = 4)
+   facet_wrap(vars(Group), nrow = 2, ncol = 3)
  dorder
  
  # Plot by family ####
@@ -105,7 +104,7 @@ sim_betas <- sim_taxa(obj = obj,
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
    xlim(1.5, 5.5) + 
-   ylim(-0.10, 0.8) + 
+   ylim(-0.25, 0.85) + 
    stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
@@ -117,3 +116,25 @@ sim_betas <- sim_taxa(obj = obj,
  
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
+ savefiles <- F
+ if (savefiles) {
+   ggsave(plot = dclass,
+          filename = "figures/class_plot.png",
+          width = 1184*2,
+          height = 745*2,
+          units = "px")
+ 
+   ggsave(plot = dorder,
+          filename = "figures/order_plot.png",
+          width = 1184*2,
+          height = 745*2,
+          units = "px")
+   
+   ggsave(plot = dfamily,
+          filename = "figures/family_plot.png",
+          width = 1184*2,
+          height = 745*2,
+          units = "px")
+ }
+   
+   
