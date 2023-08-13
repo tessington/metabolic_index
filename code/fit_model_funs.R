@@ -57,121 +57,7 @@ plotest <- function(dataest, trait, groupname, xmin, xmax) {
   
   return(groupplot)
 }
-# Function to simulate draws from mvnormal given sparse precision matrix ####
-rmvnorm_prec <- function(mu, prec, n.sims, random_seed ) {
-  set.seed( random_seed )
-  z = matrix(rnorm(length(mu) * n.sims), ncol=n.sims)
-  L = Matrix::Cholesky(prec, super=TRUE)
-  z = Matrix::solve(L, z, system = "Lt") ## z = Lt^-1 %*% z
-  z = Matrix::solve(L, z, system = "Pt") ## z = Pt    %*% z
-  z = as.matrix(z)
-  return(mu + z)
-}
 
-
-# Function to simulate species within a specified grouping represented, using MLE ####
-sim_spc_in_group <- function(obj, 
-                             rep,
-                             n.sims, 
-                             ParentChild_gz, 
-                             Groups,
-                             level) {
-  
-  allgroups <- c("class", "order", "family")
-  # if level = 0, this means you are simulating a species in a Class not represented in the dataset
-  
-  # get random draws for all variables
-  newpar = rmvnorm_prec( mu = obj$env$last.par.best,
-                         prec = rep$jointPrecision, 
-                         n.sims = n.sims,
-                         random_seed = sample(1:1000000, 1))
-  
-  parnames <- names(obj$env$last.par.best)
-  # extract the simulated beta_gj
-  alpha_j_random <- newpar[grep(parnames, pattern = "alpha_j"),]
-  beta_gj_random <-newpar[grep(parnames, pattern = "beta_gj"),]
-  L_z <- obj$env$last.par.best[grep(parnames, pattern = "L_z")]
-  L <- matrix(0, nrow = n_j, ncol = n_j)
-  #### Fill iin Cholesky Matrix ####
-  Count = 1
-  D <- 0.001
-  for (i in 1 : n_j) {
-    for (j in 1 : n_j) {
-      if (i ==j) {
-        L[i,j] <- exp(L_z[Count])
-        Count <- Count + 1
-      }
-      if (i>j) {
-        L[i,j] <- L_z[Count]
-        Count <- Count + 1
-      }
-    }
-  }
-  sigma <- L %*% t(L) + D
-  ### extract log_lambda ####
-  
-  log_lambda <- obj$env$last.par.best[grep(parnames, pattern = "log_lambda")]
-  
-  ### assign beta_gj to logAo, no, and Eo matrixes ####
-  class_index <- which(ParentChild_gz$ChildTaxon == 1)
-  order_index <-  which(ParentChild_gz$ChildTaxon == 2)
-  family_index <-  which(ParentChild_gz$ChildTaxon == 3)
-  species_index <- which(ParentChild_gz$ChildTaxon == 4)
-  n_gcj <- length(class_index)
-  n_goj <- length(order_index)
-  n_gfj <- length(family_index)
-  n_gj <- length(species_index)
-  nbeta <- nrow(beta_gj_random)
-  n_j <- 3 # number of traits
-  
-  # Filter out means corresponding the the taxonomic level ####
-  if(level >0) {
-    # Make dataframe with Variable and Level so later can look up corresponding elements in beta_gj_random
-    # make an array for looking things up
-    beta_df <- tibble(Var = rep(c("logAo", "n", "Eo"), each = (n_gcj + n_goj + n_gfj + n_gj)),
-                      Level = rep(c(rep("class", n_gcj), rep("order", n_goj), rep("family", n_gfj), rep("species", n_gj)), n_j),
-                      Est = beta_gj_random)
-    
-    beta_df_group <- dplyr::filter(beta_df, Level == allgroups[level])
-    allgroups <- c("class", "order", "family")
-    ngroups_array <- c(n_gcj, n_goj, n_gfj)
-    
-    # Extract out vectors for each parameter
-    logAos <- matrix(dplyr::filter(beta_df_group, Var == "logAo")$Est, ncol = 1, nrow = n.sims * ngroups_array[level])
-    ns <- matrix(dplyr::filter(beta_df_group, Var == "n")$Est, ncol = 1, nrow = n.sims * ngroups_array[level])
-    Eos <- matrix(dplyr::filter(beta_df_group, Var == "Eo")$Est, ncol = 1, nrow = n.sims * ngroups_array[level])
-  }
-  if(level ==0) {
-    alpha_df <- tibble(Var = c("logAo", "n", "Eo"),
-                       Est = alpha_j_random)
-    logAos <- matrix(dplyr::filter(alpha_df, Var == "logAo")$Est, ncol = 1, nrow = n.sims)
-    ns <- matrix(dplyr::filter(alpha_df, Var == "n")$Est, ncol = 1, nrow = n.sims)
-    Eos <- matrix(dplyr::filter(alpha_df, Var == "Eo")$Est, ncol = 1, nrow = n.sims)
-  }
-  # Place in single matrix with mean trait values as rows, including groupname as a fourth column ####
-  group_sims <- tibble(logAo = logAos,
-                       n = ns,
-                       Eo = Eos,
-                       Group = rep(Groups, each = n.sims)
-  )
-  
-  ### using random draw for taxonomic level mean simulate value for random species within that level
-    if (level >0) lambda_sum <- sum(exp(log_lambda[level:3]))
-    if (level ==0) lambda_sum <- sum(exp(log_lambda)) +1
-  
-  nreps <- ifelse(level ==0, 1,  ngroups_array[level])
-  sim_beta_species <- group_sims[,1:3]+ rmvnorm(n = n.sims * nreps, 
-                                                mean = rep(0,3), 
-                                                sigma = lambda_sum * sigma)
-  
-  ### Save result in a tibble ####
-  sim_beta_df <- tibble(logAo =sim_beta_species[,1],
-                        Eo = sim_beta_species[,3],
-                        n = sim_beta_species[,2],
-                        Group = rep(Groups,n.sims)
-  )
-  return(sim_beta_df)
-}
 # Make taxonomic matrix ####
 make_taxa_tree <- function(all.dat, taxa.list) {
 Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
@@ -284,18 +170,21 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
   class_index <- which(ParentChild_gz$ChildTaxon == 1)
   order_index <-  which(ParentChild_gz$ChildTaxon == 2)
   family_index <-  which(ParentChild_gz$ChildTaxon == 3)
-  species_index <- which(ParentChild_gz$ChildTaxon == 4)
+  genera_index <- which(ParentChild_gz$ChildTaxon == 4)
+  species_index <- which(ParentChild_gz$ChildTaxon == 5)
   n_gcj <- length(class_index)
   n_goj <- length(order_index)
   n_gfj <- length(family_index)
+  n_ggj <- length(genera_index)
   n_gj <- length(species_index)
   nbeta <- ncol(beta_gj_sim)
   n_j <- 3 # number of traits
-  allgroups <- c("class", "order", "family")
-  ngroups_array <- c(n_gcj, n_goj, n_gfj)
+  allgroups <- c("class", "order", "family", "genera")
+  ngroups_array <- c(n_gcj, n_goj, n_gfj, n_ggj)
   nreps <-  sum(ngroups_array) + n_gj
   
   beta_sim_list <- list()
+  
   # Iterate through each mcmc iteration
   for (sim in 1:n.sims) {
     #### Extract the "sim"th MCMC simulation
@@ -311,7 +200,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
       n = beta_gj_random[(nreps +1):(2* nreps)],
       Eo = beta_gj_random[(2 * nreps + 1):(3*nreps)],
       Group = Groups,
-      level = c(rep(1, n_gcj), rep(2, n_goj), rep(3, n_gfj), rep(4, n_gj))
+      level = c(rep(1, n_gcj), rep(2, n_goj), rep(3, n_gfj), rep(4, n_ggj), rep(5, n_gj))
     )
     
     # Make covar matrix
@@ -337,9 +226,9 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
     
     ### using random draw for taxonomic level mean simulate value for a random species for each known taxa at that level
     beta_sim_i <- list()
-    for (l in 1:3) {
+    for (l in 1:4) {
       level_sims <- dplyr::filter(group_sims, level == l)
-      lambdasum <- sum(lambda_random[l:3])
+      lambdasum <- sum(lambda_random[l:4])
       tmpsims <- level_sims[,1:3] + rmvnorm(n =  ngroups_array[l],
                                             mean = rep(0, 3),
                                             sigma = lambdasum * sigma) 
@@ -361,7 +250,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
                      Eo = tmpsims[,3],
                      Group = NA,
                      level = 0)
-    beta_sim_i[[4]] <- tmp_df
+    beta_sim_i[[5]] <- tmp_df
     # combine all simulated taxa into a single tibble
     beta_sim_list[[sim]] <- do.call("rbind",beta_sim_i)
   }

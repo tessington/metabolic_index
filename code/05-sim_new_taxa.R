@@ -21,7 +21,7 @@ theme_update(panel.grid.major = element_blank(),
 source("code/fit_model_funs.R")
 # load data ###
 all.dat <- load_data()
-taxa.list <- c("Class", "Order", "Family", "Species")
+taxa.list <- c("Class", "Order", "Family", "Genera", "Species")
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
 ParentChild_gz <- taxa.info$ParentChild_gz
 PC_gz <- taxa.info$PC_gz
@@ -52,13 +52,22 @@ family_summary <- all.dat %>%
   group_by(Family, Order) %>%
   summarise(NoGenus = length(unique(Genera)), NoSpecies= length(unique(Species)))
 
+genera_summary <- all.dat %>%
+  group_by(Family, Order, Genera) %>%
+  summarise(NoSpecies= length(unique(Species)))
+
+species_summary <- all.dat %>%
+  group_by(Species) %>%
+  summarise(NoSpecies= length(unique(Species)))
+
 # simulate trait values for out of sample species calling sim_taxa() ####
 sim_betas <- sim_taxa(obj = obj,
                       ParentChild_gz = ParentChild_gz,
-                      Groups = c(unique(all.dat$Class),
-                                 unique(all.dat$Order),
-                                 unique(all.dat$Family),
-                                 unique(all.dat$Species)
+                      Groups = c(class_summary$Class,
+                                 order_summary$Order,
+                                 family_summary$Family,
+                                 genera_summary$Genera,
+                                 species_summary$Species
                                  )
                       )
 
@@ -69,8 +78,9 @@ sim_betas <- sim_taxa(obj = obj,
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-  xlim(1.5, 5.5) + 
-  ylim(-0.25, 0.85) +  stat_ellipse(type = "norm",
+  xlim(1.15, 5.5) + 
+  ylim(-0.275, 0.85) +  
+  stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
                 col = "black") +
@@ -86,8 +96,8 @@ sim_betas <- sim_taxa(obj = obj,
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-    xlim(1.5, 5.5) + 
-    ylim(-0.25, 0.85) + 
+    xlim(1.15, 5.5) + 
+    ylim(-0.275, 0.85) +  
     stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
@@ -103,8 +113,8 @@ sim_betas <- sim_taxa(obj = obj,
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-   xlim(1.5, 5.5) + 
-   ylim(-0.25, 0.85) + 
+   xlim(1.15, 5.5) + 
+   ylim(-0.275, 0.85) +  
    stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
@@ -113,6 +123,24 @@ sim_betas <- sim_taxa(obj = obj,
    labs(x = expression(log(A[o])), y = expression(E[o])) +
    facet_wrap(vars(Group), nrow = 4, ncol = 4)
  dfamily
+ 
+ ## Plot by Genera ####
+ groups.2.use <- dplyr::filter(genera_summary, NoSpecies >=2)$Genera
+ dgenera<-  ggplot(data =dplyr::filter(sim_betas, level == 4, Group %in% groups.2.use),
+                   aes( x = logAo, y = Eo)) + 
+   geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+                           show.legend = F) +
+   xlim(1.15, 5.5) + 
+   ylim(-0.275, 0.85) + 
+   stat_ellipse(type = "norm",
+                level = 0.9,
+                linewidth = 1.5,
+                col = "black") +
+   scale_fill_manual(palette = colpal) +
+   labs(x = expression(log(A[o])), y = expression(E[o])) +
+   facet_wrap(vars(Group), nrow = 4, ncol = 4)
+ dgenera
+ 
  
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
