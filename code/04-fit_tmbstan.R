@@ -21,7 +21,7 @@ tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
-taxa.list <- c("Class", "Order", "Family", "Genera", "Species")
+taxa.list <- c("Order","Family", "Genera", "Species")
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
 ParentChild_gz <- taxa.info$ParentChild_gz
 PC_gz <- taxa.info$PC_gz
@@ -71,7 +71,7 @@ spc_in_PC_gz <- taxa.info$spc_in_PC_gz
                   getJointPrecision=TRUE)
   saveRDS(file = "analysis/modelfit_stan.RDS",list(obj = obj, opt = opt, rep = rep))
 
-set.seed(7891)
+set.seed(7892)
 rstan_options(auto_write = TRUE)  # this option stops Stan from re-compiling if not necessary
 options(mc.cores = parallel::detectCores())
 sims <- tmbstan(
