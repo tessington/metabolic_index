@@ -15,13 +15,15 @@ colpal <- colorRampPalette(c("white", "#deebf7", "#9ecae1","#3182bd"))
 theme_set(theme_bw(base_size = 14))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
-             strip.background = element_blank())
+             strip.background = element_blank()
+)
+
 
 # load functions ####
 source("code/fit_model_funs.R")
 # load data ###
 all.dat <- load_data()
-taxa.list <- c("Class", "Order", "Family", "Genera", "Species")
+taxa.list <- c("Order", "Family", "Genera", "Species")
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
 ParentChild_gz <- taxa.info$ParentChild_gz
 PC_gz <- taxa.info$PC_gz
@@ -40,10 +42,6 @@ opt <- fit$opt
 rep <- fit$rep
 
 # get information by taxonomic level ####
-class_summary <- all.dat %>%
-  group_by(Class) %>%
-  summarise(NoOrder = length(unique(Order)), NoFamily = length(unique(Family)),  NoSpecies = length(unique(Species)))
-
 order_summary <- all.dat %>%
   group_by(Order, Class) %>%
   summarise(NoFamily = length(unique(Family)), NoSpecies = length(unique(Species)))
@@ -63,43 +61,24 @@ species_summary <- all.dat %>%
 # simulate trait values for out of sample species calling sim_taxa() ####
 sim_betas <- sim_taxa(obj = obj,
                       ParentChild_gz = ParentChild_gz,
-                      Groups = c(class_summary$Class,
-                                 order_summary$Order,
+                      Groups = c(order_summary$Order,
                                  family_summary$Family,
                                  genera_summary$Genera,
                                  species_summary$Species
                                  )
                       )
 
-# Plot by class ####
-# include in this plot "Other Class" for out of sample
-
- dclass<-  ggplot(data =dplyr::filter(sim_betas, level == 1),
-                  aes( x = logAo, y = Eo)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
-                           show.legend = F) +
-  xlim(1.15, 5.5) + 
-  ylim(-0.275, 0.85) +  
-  stat_ellipse(type = "norm",
-                level = 0.9,
-                linewidth = 1.5,
-                col = "black") +
-   scale_fill_manual(palette = colpal) +
-   labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 3, ncol = 5)
- dclass
- 
- # plot by order ####
+ # Plot by order ####
  
  groups.2.use <- dplyr::filter(order_summary, NoFamily >=2)$Order
-  dorder<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+  dorder<-  ggplot(data =dplyr::filter(sim_betas, level == 1, Group %in% groups.2.use),
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
     xlim(1.15, 5.5) + 
     ylim(-0.275, 0.85) +  
     stat_ellipse(type = "norm",
-                level = 0.9,
+                level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
    scale_fill_manual(palette = colpal) +
@@ -108,25 +87,42 @@ sim_betas <- sim_taxa(obj = obj,
  dorder
  
  # Plot by family ####
+ 
  groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
- dfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 3, Group %in% groups.2.use),
+ dfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
                   aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
-   xlim(1.15, 5.5) + 
    ylim(-0.275, 0.85) +  
    stat_ellipse(type = "norm",
-                level = 0.9,
+                level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
+   scale_x_continuous(limits = c(1.2, 5.35), sec.axis = sec_axis(~exp(-.), name="V (atm)", 
+                                                                 breaks = c(0.3, 0.1, 0.03, 0.01, 0.003))) +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 4, ncol = 4)
+   facet_wrap(vars(Group), nrow = 4, ncol = 4) +
+   theme(axis.line.x.top = element_line(color = "black"),
+         axis.ticks.x.top = element_line(color = "black"),
+         axis.text.x.top = element_text(color = "black"))
  dfamily
  
+ 
+ nfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                   aes( x = n)) + 
+   geom_density(fill = "#9ecae1") +
+   ylab("Density") + 
+   scale_y_continuous(n.breaks = 3) +
+   scale_x_continuous(limits = c(-0.5, 0.5), n.breaks = 4) +
+   facet_wrap(vars(Group), nrow = 4, ncol = 4) 
+ 
+ 
+ dfamily
+ nfamily
  ## Plot by Genera ####
  groups.2.use <- dplyr::filter(genera_summary, NoSpecies >=2)$Genera
- dgenera<-  ggplot(data =dplyr::filter(sim_betas, level == 4, Group %in% groups.2.use),
+ dgenera<-  ggplot(data =dplyr::filter(sim_betas, level == 3, Group %in% groups.2.use),
                    aes( x = logAo, y = Eo)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
                            show.legend = F) +
@@ -140,17 +136,10 @@ sim_betas <- sim_taxa(obj = obj,
    labs(x = expression(log(A[o])), y = expression(E[o])) +
    facet_wrap(vars(Group), nrow = 4, ncol = 4)
  dgenera
- 
- 
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
  savefiles <- F
  if (savefiles) {
-   ggsave(plot = dclass,
-          filename = "figures/class_plot.png",
-          width = 1184*2,
-          height = 745*2,
-          units = "px")
  
    ggsave(plot = dorder,
           filename = "figures/order_plot.png",
@@ -160,6 +149,11 @@ sim_betas <- sim_taxa(obj = obj,
    
    ggsave(plot = dfamily,
           filename = "figures/family_plot.png",
+          width = 1184*2,
+          height = 1184*2,
+          units = "px")
+   ggsave(plot = dfamily,
+          filename = "figures/genera_plot.png",
           width = 1184*2,
           height = 745*2,
           units = "px")
