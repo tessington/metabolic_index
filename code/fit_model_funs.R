@@ -150,6 +150,9 @@ load_data <- function() {
   all.dat$Order[tmp.index] <- "Eupercaria"
   tmp.index <- which(all.dat$Order == "Ovalentaria incertae sedis")
   all.dat$Order[tmp.index] <- "Ovalentaria"
+  # remove midwater crustacean 'Pleuroncodes planipes', as authors believed it lived anaerobically
+  all.dat <- dplyr::filter(all.dat, Species !="Pleuroncodes planipes")
+  
   return(all.dat)
 }
 
@@ -167,22 +170,20 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
   parnames <- names(obj$env$last.par.best)
   n.sims <- nrow(alpha_sim)
   ### get number of class, order, family and species ####
-  class_index <- which(ParentChild_gz$ChildTaxon == 1)
-  order_index <-  which(ParentChild_gz$ChildTaxon == 2)
-  family_index <-  which(ParentChild_gz$ChildTaxon == 3)
-  genera_index <- which(ParentChild_gz$ChildTaxon == 4)
-  species_index <- which(ParentChild_gz$ChildTaxon == 5)
-  n_gcj <- length(class_index)
+  order_index <-  which(ParentChild_gz$ChildTaxon == 1)
+  family_index <-  which(ParentChild_gz$ChildTaxon == 2)
+  genera_index <- which(ParentChild_gz$ChildTaxon == 3)
+  species_index <- which(ParentChild_gz$ChildTaxon == 4)
   n_goj <- length(order_index)
   n_gfj <- length(family_index)
   n_ggj <- length(genera_index)
   n_gj <- length(species_index)
   nbeta <- ncol(beta_gj_sim)
   n_j <- 3 # number of traits
-  allgroups <- c("class", "order", "family", "genera")
-  ngroups_array <- c(n_gcj, n_goj, n_gfj, n_ggj)
+  allgroups <- c("order", "family", "genera")
+  ngroups_array <- c(n_goj, n_gfj, n_ggj)
   nreps <-  sum(ngroups_array) + n_gj
-  
+  nlevels <- max(ParentChild_gz$ChildTaxon) - 1
   beta_sim_list <- list()
   
   # Iterate through each mcmc iteration
@@ -200,7 +201,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
       n = beta_gj_random[(nreps +1):(2* nreps)],
       Eo = beta_gj_random[(2 * nreps + 1):(3*nreps)],
       Group = Groups,
-      level = c(rep(1, n_gcj), rep(2, n_goj), rep(3, n_gfj), rep(4, n_ggj), rep(5, n_gj))
+      level = c(rep(1, n_goj), rep(2, n_gfj), rep(3, n_ggj), rep(4, n_gj))
     )
     
     # Make covar matrix
@@ -226,9 +227,10 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
     
     ### using random draw for taxonomic level mean simulate value for a random species for each known taxa at that level
     beta_sim_i <- list()
-    for (l in 1:4) {
+    
+    for (l in 1:nlevels) {
       level_sims <- dplyr::filter(group_sims, level == l)
-      lambdasum <- sum(lambda_random[l:4])
+      lambdasum <- sum(lambda_random[l:nlevels])
       tmpsims <- level_sims[,1:3] + rmvnorm(n =  ngroups_array[l],
                                             mean = rep(0, 3),
                                             sigma = lambdasum * sigma) 
@@ -250,7 +252,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
                      Eo = tmpsims[,3],
                      Group = NA,
                      level = 0)
-    beta_sim_i[[5]] <- tmp_df
+    beta_sim_i[[nlevels + 1]] <- tmp_df
     # combine all simulated taxa into a single tibble
     beta_sim_list[[sim]] <- do.call("rbind",beta_sim_i)
   }
