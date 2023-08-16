@@ -10,6 +10,7 @@ library(mvtnorm)
 library(tmbstan)
 library(shinystan)
 library(egg)
+library(cowplot)
 
 # ggplot setup ####
 theme_set(theme_bw(base_size = 16))
@@ -56,7 +57,8 @@ tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
-taxa.list <- c("Class", "Order", "Family", "Genera", "Species")
+taxa.list <- c("Order", "Family", "Genera", "Species")
+
 
 ## Create new ParentChild matrix for reduced taxonomic structure ####
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
@@ -117,14 +119,8 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol =
 
 # Summarize Estimatess ####
 
-## By Class ####
-ClassEst <- make_df_plot(level = 1, 
-                         beta_mle,
-                         beta_se,
-                         ParentChild_gz,
-                         groups = taxa.list)
 ## By Order #####
-OrderEst <- make_df_plot(level = 2, 
+OrderEst <- make_df_plot(level = 1, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,
@@ -133,14 +129,14 @@ OrderEst <- make_df_plot(level = 2,
 OrderEst <- merge(OrderEst, order_summary)
 
 ## By Family ####
-FamilyEst <- make_df_plot(level = 3, 
+FamilyEst <- make_df_plot(level = 2, 
                           beta_mle,
                           beta_se,
                           ParentChild_gz,
                           groups = taxa.list)
 FamilyEst <- merge(FamilyEst, family_summary)
 
-GeneraEst <- make_df_plot(level = 4, 
+GeneraEst <- make_df_plot(level = 3, 
                           beta_mle,
                           beta_se,
                           ParentChild_gz,
@@ -151,31 +147,16 @@ GeneraEst <- merge(GeneraEst, genera_summary)
 plot_est <- T
 if (plot_est) {
   
-  ## Plot Classes ####
-  Est.2.plot <- merge(ClassEst, class_summary)
-Aoplotc <- plotest(Est.2.plot, logAo, Class, logAomin, logAomax)
-Aoplotc <- Aoplotc + xlab(expression("log(A"[o]~ ")"))
-Eoplotc <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
-Eoplotc <- Eoplotc + theme(axis.text.y = element_blank(),
-                           axis.title.y = element_blank()) +
-  xlab(expression("E"[o]))
-
-class_plot <- ggarrange(Aoplotc, 
-          Eoplotc,
-          nrow = 1)
-
-nplotclass <- plotest(Est.2.plot, n, Class, nmin, nmax)
-nplotclass <- nplotclass + xlim(c(-0.3, 0.15))
-
 ## Plot Orders #####
   Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=2)
   Aoploto <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
-  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")"))
+  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
   Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
   Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
                              axis.title.y = element_blank()
                              )  +
-    xlab(expression("E"[o]))
+    xlab(expression("E"[o])) +
+    xlim(c(0, 0.65))
   
   nplotorder <- plotest(Est.2.plot, n, Order, nmin, nmax)
   nplotorder <- nplotorder + xlim(c(-0.3, 0.15))
@@ -187,12 +168,13 @@ nplotclass <- nplotclass + xlim(c(-0.3, 0.15))
   ##Plot Families #####
   Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
   Aoplotf <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
-  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")"))
+  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
   Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
   Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
                              axis.title.y = element_blank()
                              )  +
-    xlab(expression("E"[o]))
+    xlab(expression("E"[o]))+
+    xlim(c(0, 0.66))
   nplotfamily <- plotest(Est.2.plot, n, Family, nmin, nmax)
   nplotfamily <- nplotfamily + xlim(c(-0.3, 0.15))
 family_plot <-  ggarrange(Aoplotf, 
@@ -200,34 +182,35 @@ family_plot <-  ggarrange(Aoplotf,
                           nrow = 1)
 
 
-##Plot Families #####
+##Plot Genera #####
 Est.2.plot <- dplyr::filter(GeneraEst, NoSpecies >=2)
 Aoplotg <- plotest(Est.2.plot, logAo, Genera, logAomin, logAomax)
-Aoplotg <- Aoplotg + xlab(expression("log(A"[o]~ ")"))
+Aoplotg <- Aoplotg + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
 Eoplotg <- plotest(Est.2.plot, Eo, Genera, Eomin, Eomax)
 Eoplotg <- Eoplotg + theme(axis.text.y = element_blank(),
                            axis.title.y = element_blank()
 )  +
-  xlab(expression("E"[o]))
+  xlab(expression("E"[o]))+
+  xlim(c(0, 0.65))
 nplotgenera <- plotest(Est.2.plot, n, Genera, nmin, nmax)
 nplotgenera <- nplotgenera + xlim(c(-0.3, 0.15))
 genera_plot <-  ggarrange(Aoplotg, 
                           Eoplotg,
                           nrow = 1)
 
-## Multi plot of class, order and family
-pdf(file = "figures/class_and_order.pdf",
-    width = 10,
-    height = 8)
-plot_grid(class_plot, order_plot, family_plot, genera_plot,
+## Multi plot of order and family
+pdf(file = "figures/ao_and_eo.pdf",
+    width = 11,
+    height = 6)
+plot_grid(order_plot, family_plot,
           labels = "auto")
 dev.off()
 
   ## multiplot of n #####
-pdf(file = "figures/n_class_order_family.pdf",
+pdf(file = "figures/n_order_family.pdf",
     width = 10,
     height = 8)
-plot_grid(nplotclass, nplotorder, nplotfamily, nplotgenera,
+plot_grid(nplotorder, nplotfamily,
           labels = "auto")
 
   dev.off()
@@ -236,7 +219,7 @@ plot_grid(nplotclass, nplotorder, nplotfamily, nplotgenera,
 
 # Compare fits to individual species ####
 ## Add to species the Ao and se ####
-SpeciesEst <- make_species_df(level = 5, 
+SpeciesEst <- make_species_df(level = 4, 
                          beta_mle,
                          beta_se,
                          ParentChild_gz,

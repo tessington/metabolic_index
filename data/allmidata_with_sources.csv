@@ -1,0 +1,396 @@
+,species,Temp,W,Pcrit,Source
+1,acanthephyra acutifrons,5,8.64,3.933333333,Cowles et al 1991 MarBiol 110:75:83
+2,acanthephyra acutifrons,10,8.64,3.853333333,Cowles et al 1991 MarBiol 110:75:83
+3,acanthephyra curtirostris,5,2.29,3.746666667,Childress 1975 ComBiolPhys 50A: 787 - 199
+4,acanthephyra curtirostris,10,2.29,3.853333333,Childress 1975 ComBiolPhys 50A: 787 - 199
+5,acanthephyra purpurea,7,1.391,3.733333333,Donnely & Torres 1988 MarBiol 97:483-494
+6,acanthephyra purpurea,14,1.391,4.266666667,Donnely & Torres 1988 MarBiol 97:483-494
+7,acanthephyra smithi,5,3.84,3.6,Cowles et al 1991 MarBiol 110:75:83
+8,acanthephyra smithi,10,3.84,3.64,Cowles et al 1991 MarBiol 110:75:83
+9,acanthephyra smithi,20,3.84,3.4,Cowles et al 1991 MarBiol 110:75:83
+10,acipenser brevirostrum,25,2.6,8.646315116,"Campbell and Boodman, 2004"
+11,acipenser brevirostrum,22,2.4,6.687335168,"Campbell and Boodman, 2004"
+12,acipenser brevirostrum,30,2.6,10.77943916,"Campbell and Boodman, 2004"
+13,acipenser brevirostrum,26,2.3,7.165179821,"Campbell and Boodman, 2004"
+14,acipenser brevirostrum,26,2.3,7.165179821,"Campbell and Boodman, 2004"
+15,acipenser brevirostrum,26,2.3,7.165179821,"Campbell and Boodman, 2004"
+16,alitta succinea,25,0.215,1.68,Sturdivant et al. 2015
+17,alitta succinea,30,0.215,2.52,Sturdivant et al. 2015
+18,anguilla japonica,10,325,11.73333333,Chan & Woo 1978
+19,anguilla japonica,32,325,17.06666667,Chan & Woo 1978
+20,bellapiscis lesleyae,15,0.54,5.613597931,Hilton et al 2008
+21,bellapiscis lesleyae,25,0.59,11.44676051,Hilton et al 2008
+22,bellapiscis medius,15,2.37,2.319007692,Hilton et al 2008
+23,bellapiscis medius,25,2.84,5.530439335,Hilton et al 2008
+24,bythograea thermydron,2,65,1.2,Mickel & Childress 1982 PhysZool 55: 199 - 207
+25,bythograea thermydron,12,65,1.866666667,Mickel & Childress 1982 PhysZool 55: 199 - 207
+26,bythograea thermydron,25,65,2.533333333,Mickel & Childress 1982 PhysZool 55: 199 - 207
+27,callinectes sapidus,17,200,3.599189,Batteron & Cameron 1978 JExpZool 203: 403 - 418
+28,callinectes sapidus,23,200,4.23434,Batteron & Cameron 1978 JExpZool 203: 403 - 418
+29,callinectes sapidus,28,200,8.045246,Batteron & Cameron 1978 JExpZool 203: 403 - 418
+30,cancer irroratus,10,1.90E-05,1.946397304,Vargo & Sastry 1977
+31,cancer irroratus,15,1.90E-05,3.571804951,Vargo & Sastry 1977
+32,cancer irroratus,20,1.90E-05,4.691290889,Vargo & Sastry 1977
+33,cancer irroratus,25,1.90E-05,8.550244948,Vargo & Sastry 1977
+34,cancer irroratus,30,1.90E-05,30.0433401,Vargo & Sastry 1977
+35,cancer irroratus,10,1.90E-05,1.946397304,Vargo & Sastry 1977
+36,cancer irroratus,15,1.90E-05,4.531394341,Vargo & Sastry 1977
+37,cancer irroratus,20,1.90E-05,5.893434179,Vargo & Sastry 1977
+38,cancer irroratus,25,1.90E-05,9.542970016,Vargo & Sastry 1977
+39,cancer irroratus,30,1.90E-05,30.0433401,Vargo & Sastry 1977
+40,cancer irroratus,10,5.74E-05,1.585953358,Vargo & Sastry 1977
+41,cancer irroratus,15,5.74E-05,1.785902476,Vargo & Sastry 1977
+42,cancer irroratus,20,5.74E-05,6.743730653,Vargo & Sastry 1977
+43,cancer irroratus,25,5.74E-05,9.639040184,Vargo & Sastry 1977
+44,cancer irroratus,30,5.74E-05,25.1404339,Vargo & Sastry 1977
+45,cancer irroratus,10,5.74E-05,2.066545285,Vargo & Sastry 1977
+46,cancer irroratus,15,5.74E-05,4.104910168,Vargo & Sastry 1977
+47,cancer irroratus,20,5.74E-05,6.743730653,Vargo & Sastry 1977
+48,cancer irroratus,25,5.74E-05,9.607016795,Vargo & Sastry 1977
+49,cancer irroratus,30,5.74E-05,25.1404339,Vargo & Sastry 1977
+50,cancer irroratus,10,0.000109,1.682071744,Vargo & Sastry 1977
+51,cancer irroratus,15,0.000109,0.906278868,Vargo & Sastry 1977
+52,cancer irroratus,20,0.000109,4.134200096,Vargo & Sastry 1977
+53,cancer irroratus,25,0.000109,7.685613436,Vargo & Sastry 1977
+54,cancer irroratus,30,0.000109,20.86343062,Vargo & Sastry 1977
+55,cancer irroratus,10,0.000109,3.195936313,Vargo & Sastry 1977
+56,cancer irroratus,15,0.000109,1.705936693,Vargo & Sastry 1977
+57,cancer irroratus,20,0.000109,7.271500878,Vargo & Sastry 1977
+58,cancer irroratus,25,0.000109,13.96219774,Vargo & Sastry 1977
+59,cancer irroratus,30,0.000109,20.86343062,Vargo & Sastry 1977
+60,cancer irroratus,10,0.000173,1.345657395,Vargo & Sastry 1977
+61,cancer irroratus,15,0.000173,1.679281432,Vargo & Sastry 1977
+62,cancer irroratus,20,0.000173,3.635750439,Vargo & Sastry 1977
+63,cancer irroratus,25,0.000173,8.005847329,Vargo & Sastry 1977
+64,cancer irroratus,30,0.000173,22.35864315,Vargo & Sastry 1977
+65,cancer irroratus,10,0.000173,1.946397304,Vargo & Sastry 1977
+66,cancer irroratus,15,0.000173,2.319007692,Vargo & Sastry 1977
+67,cancer irroratus,20,0.000173,4.486046912,Vargo & Sastry 1977
+68,cancer irroratus,25,0.000173,10.98402254,Vargo & Sastry 1977
+69,cancer irroratus,30,0.000173,22.35864315,Vargo & Sastry 1977
+70,cancer irroratus,10,0.000246,3.868765011,Vargo & Sastry 1977
+71,cancer irroratus,15,0.000246,1.705936693,Vargo & Sastry 1977
+72,cancer irroratus,20,0.000246,4.603329185,Vargo & Sastry 1977
+73,cancer irroratus,25,0.000246,7.877753772,Vargo & Sastry 1977
+74,cancer irroratus,30,0.000246,22.35864315,Vargo & Sastry 1977
+75,cancer irroratus,10,0.000246,4.469504919,Vargo & Sastry 1977
+76,cancer irroratus,15,0.000246,2.5855603,Vargo & Sastry 1977
+77,cancer irroratus,20,0.000246,9.587825754,Vargo & Sastry 1977
+78,cancer irroratus,25,0.000246,17.3887004,Vargo & Sastry 1977
+79,cancer irroratus,30,0.000246,22.01091931,Vargo & Sastry 1977
+80,carassius carassius,10,7.6,2.59177968,Cammen 1985 MEPS 21: 163 - 167
+81,carassius carassius,20,7.13,2.39446312,Cammen 1985 MEPS 21: 163 - 167
+82,carassius carassius,30,7.23,2.399796,Cammen 1985 MEPS 21: 163 - 167
+83,carcinus maenas,7,20,2.850666667,Breteler 1975 JSR 9: 243 - 254
+84,carcinus maenas,15,20,3.756,Breteler 1975 JSR 9: 243 - 254
+85,carcinus maenas,22,20,8.030666667,Breteler 1975 JSR 9: 243 - 254
+86,centropristis striata,12,362.025,4.1265,"Slesinger et al, unpublished"
+87,centropristis striata,17,396.625,4.47825,"Slesinger et al, unpublished"
+88,centropristis striata,22,516.475,4.578,"Slesinger et al, unpublished"
+89,centropristis striata,27,431.175,6.636,"Slesinger et al, unpublished"
+90,centropristis striata,30,434.4,7.95375,"Slesinger et al, unpublished"
+91,chromis atripectoralis,29,4.39,4.92,Gardiner et al 20210
+92,chromis atripectoralis,29,3.52,2.346666667,Gardiner et al 20210
+93,chromis atripectoralis,29,3.39,2.706666667,Gardiner et al 20210
+94,chromis atripectoralis,29,4.96,3.546666667,Gardiner et al 20210
+95,chromis atripectoralis,29,4.08,2.986666667,Gardiner et al 20210
+96,chromis atripectoralis,29,3.44,2.266666667,Gardiner et al 20210
+97,chromis atripectoralis,29,2.5,4.28,Gardiner et al 20210
+98,chromis atripectoralis,29,3.61,3.493333333,Gardiner et al 20210
+99,chromis atripectoralis,31,4.13,4.853333333,Gardiner et al 20210
+100,chromis atripectoralis,31,3.01,5.24,Gardiner et al 20210
+101,chromis atripectoralis,31,3.75,3.653333333,Gardiner et al 20210
+102,chromis atripectoralis,31,5.51,4.76,Gardiner et al 20210
+103,chromis atripectoralis,31,3.35,4.466666667,Gardiner et al 20210
+104,chromis atripectoralis,31,3.22,4.493333333,Gardiner et al 20210
+105,chromis atripectoralis,31,4.69,3.866666667,Gardiner et al 20210
+106,chromis atripectoralis,31,3.93,3.506666667,Gardiner et al 20210
+107,chromis atripectoralis,33,3.55,5.253333333,Gardiner et al 20210
+108,chromis atripectoralis,33,3.88,5.853333333,Gardiner et al 20210
+109,chromis atripectoralis,33,4.6,5.28,Gardiner et al 20210
+110,chromis atripectoralis,33,3.05,3.84,Gardiner et al 20210
+111,chromis atripectoralis,33,4.07,5.8,Gardiner et al 20210
+112,chromis atripectoralis,33,2.67,3.186666667,Gardiner et al 20210
+113,chromis atripectoralis,33,3.95,3.733333333,Gardiner et al 20210
+114,chromis atripectoralis,33,4,4.04,Gardiner et al 20210
+115,chromis atripectoralis,35,3.26,5.786666667,Gardiner et al 20210
+116,chromis atripectoralis,35,3.29,5.253333333,Gardiner et al 20210
+117,chromis atripectoralis,35,2.42,5.2,Gardiner et al 20210
+118,chromis atripectoralis,35,2.24,3.506666667,Gardiner et al 20210
+119,chromis atripectoralis,35,2.17,7.08,Gardiner et al 20210
+120,chromis atripectoralis,35,2.34,5.453333333,Gardiner et al 20210
+121,chromis atripectoralis,35,2.5,4.626666667,Gardiner et al 20210
+122,chromis atripectoralis,35,1.6,2.52,Gardiner et al 20210
+123,crassostrea gigas,15,1.55,7.6641554,#N/A
+124,crassostrea gigas,20,1.55,9.0826593,#N/A
+125,crassostrea gigas,25,1.55,10.2047594,#N/A
+126,cyclopterus lumpus,10,23,7.253333333,Killen et al. 2007
+127,cyclopterus lumpus,16,22.5,8.506666667,Killen et al. 2007
+128,dentex dentex,15.55,745.1,7.9605592,Valverde et al 2006
+129,dentex dentex,19.65,601.7,7.7488422,Valverde et al 2006
+130,dentex dentex,17.05,117.4,6.2244798,Valverde et al 2006
+131,dentex dentex,13.75,117.1,5.6105005,Valverde et al 2006
+132,dentex dentex,23.95,255.1,8.5957102,Valverde et al 2006
+133,dentex dentex,27.95,251.2,8.5110234,Valverde et al 2006
+134,dentex dentex,26.65,656.4,8.1934479,Valverde et al 2006
+135,dentex dentex,20.75,350.8,6.4785402,Valverde et al 2006
+136,diplodus puntazzo,28.55,58.97,6.69660871,Cerezo and Garcia 2004
+137,diplodus puntazzo,28.55,91.89,8.75238078,Cerezo and Garcia 2004
+138,diplodus puntazzo,22.05,125.19,8.30565791,Cerezo and Garcia 2004
+139,diplodus puntazzo,19.35,166.67,7.71285031,Cerezo and Garcia 2004
+140,diplodus puntazzo,15.35,177.19,6.43407963,Cerezo and Garcia 2004
+141,diplodus puntazzo,22.25,281.55,6.69660871,Cerezo and Garcia 2004
+142,diplodus puntazzo,24.75,255.66,8.89423117,Cerezo and Garcia 2004
+143,diplodus puntazzo,27.25,14.95,6.3938534,Cerezo and Garcia 2004
+144,diplodus puntazzo,14.95,509.11,5.12566857,Cerezo and Garcia 2004
+145,doryteuthis pealeii,10,300,3.767,Birk unpublished
+146,doryteuthis pealeii,15,300,4.714,Birk unpublished
+147,dosidicus gigas,10,4500,1.6,Trueblood & Seibel 2013
+148,dosidicus gigas,20,4500,3.8,Trueblood & Seibel 2013
+149,funchalia villosa,7,2.08,3,Donnely & Torres 1988 MarBiol 97:483-494
+150,funchalia villosa,20,2.08,4.333333333,Donnely & Torres 1988 MarBiol 97:483-494
+151,gadus morhua,5,140,1.11561737,Schurmann & Stevenson 1992
+152,gadus morhua,15,166.7,6.4150251,Soofiani & Priede 1985 
+153,gadus morhua,9,140,2.421532991,Schurmann & Stevenson 1992
+154,gadus morhua,10,157.7,4.9118344,Soofiani & Priede 1985 
+155,gadus morhua,10,140,3.099817928,Schurmann & Stevenson 1992
+156,gadus morhua,5,124.1,3.4933305,Soofiani & Priede 1985 
+157,gadus morhua,11,140,3.412610307,Schurmann & Stevenson 1992
+158,gadus morhua,15,140,3.625115473,Schurmann & Stevenson 1992
+159,gadus morhua,17,140,6.374900666,Schurmann & Stevenson 1992
+160,gadus morhua,5,140,1.11561737,Schurmann & Stevenson 1992
+161,gadus morhua,15,166.7,6.4150251,Soofiani & Priede 1985 
+162,gadus morhua,9,140,2.421532991,Schurmann & Stevenson 1992
+163,gadus morhua,10,157.7,4.9118344,Soofiani & Priede 1985 
+164,gadus morhua,10,140,3.099817928,Schurmann & Stevenson 1992
+165,gadus morhua,5,124.1,3.4933305,Soofiani & Priede 1985 
+166,gadus morhua,11,140,3.412610307,Schurmann & Stevenson 1992
+167,gadus morhua,15,140,3.625115473,Schurmann & Stevenson 1992
+168,gadus morhua,17,140,6.374900666,Schurmann & Stevenson 1992
+169,gadus ogac,8,74.3,11.6020916,Bushnell et al. 1994
+170,gadus ogac,1,50.9,8.5533668,Bushnell et al. 1994
+171,gammarus pseudolimnaeus,10,0.06,3.388173084,Hoback and Barnhart 1996
+172,gammarus pseudolimnaeus,15,0.06,4.264841733,Hoback and Barnhart 1996
+173,gammarus pseudolimnaeus,20,0.06,7.828591671,Hoback and Barnhart 1996
+174,gammarus pseudolimnaeus,10,0.04,2.186693267,Hoback and Barnhart 1996
+175,gammarus pseudolimnaeus,15,0.04,2.958733952,Hoback and Barnhart 1996
+176,gammarus pseudolimnaeus,20,0.04,6.274601564,Hoback and Barnhart 1996
+177,gammarus pseudolimnaeus,10,0.01,0.841035872,Hoback and Barnhart 1996
+178,gammarus pseudolimnaeus,15,0.01,2.292352431,Hoback and Barnhart 1996
+179,gammarus pseudolimnaeus,20,0.01,3.840994415,Hoback and Barnhart 1996
+180,gammarus pseudolimnaeus,10,0.06,3.988912992,Hoback and Barnhart 1996
+181,gammarus pseudolimnaeus,15,0.06,5.331052166,Hoback and Barnhart 1996
+182,gammarus pseudolimnaeus,20,0.06,9.411902346,Hoback and Barnhart 1996
+183,gammarus pseudolimnaeus,10,0.04,2.931610753,Hoback and Barnhart 1996
+184,gammarus pseudolimnaeus,15,0.04,3.411873386,Hoback and Barnhart 1996
+185,gammarus pseudolimnaeus,20,0.04,8.415003032,Hoback and Barnhart 1996
+186,gammarus pseudolimnaeus,10,0.01,1.874308514,Hoback and Barnhart 1996
+187,gammarus pseudolimnaeus,15,0.01,2.798802387,Hoback and Barnhart 1996
+188,gammarus pseudolimnaeus,20,0.01,5.307022818,Hoback and Barnhart 1996
+189,gammarus pseudolimnaeus,10,0.06,4.253238552,Hoback and Barnhart 1996
+190,gammarus pseudolimnaeus,15,0.06,5.037844297,Hoback and Barnhart 1996
+191,gammarus pseudolimnaeus,20,0.06,9.558505186,Hoback and Barnhart 1996
+192,gammarus pseudolimnaeus,10,0.04,3.484291469,Hoback and Barnhart 1996
+193,gammarus pseudolimnaeus,15,0.04,3.385218125,Hoback and Barnhart 1996
+194,gammarus pseudolimnaeus,20,0.04,9.35326121,Hoback and Barnhart 1996
+195,gammarus pseudolimnaeus,10,0.01,2.258782056,Hoback and Barnhart 1996
+196,gammarus pseudolimnaeus,15,0.01,3.278597082,Hoback and Barnhart 1996
+197,gammarus pseudolimnaeus,20,0.01,5.600228499,Hoback and Barnhart 1996
+198,gaussia princeps,10,0.03475,1.333333333,Childress 1975 ComBiolPhys 50A: 787 - 199
+199,gaussia princeps,7,0.03475,1.4,Childress 1975 ComBiolPhys 50A: 787 - 199
+200,gaussia princeps,5.5,0.03475,1.466666667,Childress 1975 ComBiolPhys 50A: 787 - 199
+201,gennadas sp.,5,0.29,0.61,#N/A
+202,gennadas sp.,10,0.37,0.29,#N/A
+203,gennadas valens,14,0.534,3.666666667,Donnely & Torres 1988 MarBiol 97:483-494
+204,gennadas valens,20,0.534,4.333333333,Donnely & Torres 1988 MarBiol 97:483-494
+205,gibberulus gibbosus,28,0.98,5.3,Lefevre et al. 2015
+206,gibberulus gibbosus,33,0.98,5.3,Lefevre et al. 2015
+207,gobiodon erythrospilus,33,1.32,7.988738733,Sorensen et al 2014
+208,gobiodon erythrospilus,32,1.32,6.450191294,Sorensen et al 2014
+209,gobiodon erythrospilus,31,1.32,6.20754244,Sorensen et al 2014
+210,gobiodon erythrospilus,29,1.32,5.514253952,Sorensen et al 2014
+211,gobiodon histrio,33,1.43,8.084731221,Sorensen et al 2014
+212,gobiodon histrio,32,1.43,5.95422305,Sorensen et al 2014
+213,gobiodon histrio,31,1.43,5.695610734,Sorensen et al 2014
+214,gobiodon histrio,29,1.43,4.826300732,Sorensen et al 2014
+215,lophelia pertusa,6.35,NA,6,Dodds et al 2007
+216,lophelia pertusa,11,NA,8,Dodds et al 2007
+217,lucicutia hulsemannae,5,0.0067,0.67,#N/A
+218,lucicutia hulsemannae,8,0.0067,0.38,#N/A
+219,maja brachydactyla,18.74,530,7.75519371,Cerezo et al 2012
+220,maja brachydactyla,17.79,1390,8.24637715,Cerezo et al 2012
+221,maja brachydactyla,18.57,540,7.71285031,Cerezo et al 2012
+222,maja brachydactyla,19.29,1080,7.37833745,Cerezo et al 2012
+223,maja brachydactyla,18.67,600,5.1023797,Cerezo et al 2012
+224,maja brachydactyla,18.75,450,7.63874936,Cerezo et al 2012
+225,maja brachydactyla,22.14,520,11.27604742,Cerezo et al 2012
+226,maja brachydactyla,21.83,1250,9.06360477,Cerezo et al 2012
+227,maja brachydactyla,23.06,420,9.39176612,Cerezo et al 2012
+228,maja brachydactyla,22.61,470,10.73616907,Cerezo et al 2012
+229,maja brachydactyla,25.95,540,9.65006086,Cerezo et al 2012
+230,maja brachydactyla,26.33,590,10.46517131,Cerezo et al 2012
+231,maja brachydactyla,25.28,1620,10.13912713,Cerezo et al 2012
+232,maja brachydactyla,25.66,560,8.49408604,Cerezo et al 2012
+233,megacalanus sp.,5,0.04,1.01,#N/A
+234,megacalanus sp.,10,0.031,0.91,#N/A
+235,melanostigma pammelas,3,5,0.933333333,Belman & Gordon 1979
+236,melanostigma pammelas,5,5,1.066666667,Belman & Gordon 1979
+237,melanostigma pammelas,7,5,1.333333333,Belman & Gordon 1979
+238,melanostigma pammelas,10,5,2.8,Belman & Gordon 1979
+239,morone saxatilis,28,1300,7.410095,Neumann et al 1981
+240,morone saxatilis,20,1300,5.292925,Neumann et al 1981
+241,mytilus sp.,10,1,5.292925,Artigaud et al 2014
+242,mytilus sp.,18,1,7.0290044,Artigaud et al 2014
+243,mytilus sp.,25,1,7.2830648,Artigaud et al 2014
+244,nautilus pompilius,11,210,2.893333333,Boutilier et al 1996  Nature 380 534-536
+245,nautilus pompilius,16,210,4.106666667,Boutilier et al 1996  Nature 380 534-536
+246,nautilus pompilius,21,210,6.533333333,Boutilier et al 1996  Nature 380 534-536
+247,nematobrachion flexipes,10,0.089,0.68,#N/A
+248,nematobrachion flexipes,20,0.045,1.58,#N/A
+249,notostomus elegans,5,22.54,2.2,Cowles et al 1991 MarBiol 110:75:83
+250,notostomus elegans,10,22.54,3.04,Cowles et al 1991 MarBiol 110:75:83
+251,notostomus gibbosus,5,10.4,1.893333333,Cowles et al 1991 MarBiol 110:75:83
+252,notostomus gibbosus,10,10.4,3.733333333,Cowles et al 1991 MarBiol 110:75:83
+253,octopus vulgaris,14,2050,6.21389395,Parra et al 2000 JMBAssUK 80: 557 - 558
+254,octopus vulgaris,14,2000,3.92946752,Parra et al 2000 JMBAssUK 80: 557 - 558
+255,octopus vulgaris,14.7,510,7.24919008,Parra et al 2000 JMBAssUK 80: 557 - 558
+256,octopus vulgaris,14,380,5.0176929,Parra et al 2000 JMBAssUK 80: 557 - 558
+257,octopus vulgaris,14,500,3.44886993,Parra et al 2000 JMBAssUK 80: 557 - 558
+258,octopus vulgaris,14,490,7.0501761,Parra et al 2000 JMBAssUK 80: 557 - 558
+259,octopus vulgaris,17.3,1030,9.9718707,Parra et al 2000 JMBAssUK 80: 557 - 558
+260,octopus vulgaris,21.3,1200,6.25835452,Parra et al 2000 JMBAssUK 80: 557 - 558
+261,octopus vulgaris,18.7,1100,8.85612211,Parra et al 2000 JMBAssUK 80: 557 - 558
+262,octopus vulgaris,18,690,3.31548822,Parra et al 2000 JMBAssUK 80: 557 - 558
+263,octopus vulgaris,14,1100,4.91395157,Parra et al 2000 JMBAssUK 80: 557 - 558
+264,octopus vulgaris,18.7,790,7.17508913,Parra et al 2000 JMBAssUK 80: 557 - 558
+265,octopus vulgaris,18,320,7.06923063,Parra et al 2000 JMBAssUK 80: 557 - 558
+266,octopus vulgaris,20,520,6.73895211,Parra et al 2000 JMBAssUK 80: 557 - 558
+267,octopus vulgaris,16.7,220,5.20400386,Parra et al 2000 JMBAssUK 80: 557 - 558
+268,octopus vulgaris,16.7,180,8.15957318,Parra et al 2000 JMBAssUK 80: 557 - 558
+269,octopus vulgaris,24,530,7.47149293,Parra et al 2000 JMBAssUK 80: 557 - 558
+270,octopus vulgaris,18,1100,7.84411485,Parra et al 2000 JMBAssUK 80: 557 - 558
+271,octopus vulgaris,21.3,780,7.44185255,Parra et al 2000 JMBAssUK 80: 557 - 558
+272,octopus vulgaris,24.7,2200,6.76647532,Parra et al 2000 JMBAssUK 80: 557 - 558
+273,octopus vulgaris,20.6,1020,8.90481702,Parra et al 2000 JMBAssUK 80: 557 - 558
+274,octopus vulgaris,16,1010,8.14051865,Parra et al 2000 JMBAssUK 80: 557 - 558
+275,ophiocoma wendtii,29,10,6.364556968,#N/A
+276,ophiocoma wendtii,32,10,4.737392826,#N/A
+277,ophioderma cinereum,29,5,6.261902823,#N/A
+278,ophioderma cinereum,32,5,7.859765371,#N/A
+279,oplophorus gracilirostris,5,2.58,4.666666667,Donnely & Torres 1988 MarBiol 97:483-494
+280,oplophorus gracilirostris,10,2.58,5.4,Donnely & Torres 1988 MarBiol 97:483-494
+281,oplophorus gracilirostris,20,2.58,6.36,Donnely & Torres 1988 MarBiol 97:483-494
+282,oplophorus spinosus,5,2.92,4.386666667,Cowles et al 1991 MarBiol 110:75:83
+283,oplophorus spinosus,10,2.92,2.426666667,Cowles et al 1991 MarBiol 110:75:83
+284,oplophorus spinosus,20,2.92,7.066666667,Cowles et al 1991 MarBiol 110:75:83
+285,oreochromis niloticus,20,NA,2.5464502,Farmer & Beamish 1969
+286,oreochromis niloticus,25,NA,2.399796,Farmer & Beamish 1969
+287,oreochromis niloticus,30,NA,3.9596634,Farmer & Beamish 1969
+288,oreochromis niloticus,35,NA,4.0263244,Farmer & Beamish 1969
+289,palaemonetes pugio,20,NA,1.77,#N/A
+290,palaemonetes pugio,25,NA,4.34,#N/A
+291,palaemonetes vulgaris,18,NA,2.45,#N/A
+292,palaemonetes vulgaris,24,NA,2.67,#N/A
+293,palaemonetes vulgaris,25,NA,5.69,#N/A
+294,pandalus borealis,5,3.3,1.905453,Schmid 1996 BPF 202 1 - 92
+295,pandalus borealis,8,3.3,2.9216946,Schmid 1996 BPF 202 1 - 92
+296,pandalus borealis,5,11.31,3.2816135,Schmid 1996 BPF 202 1 - 92
+297,pandalus borealis,8,11.31,4.7001174,Schmid 1996 BPF 202 1 - 92
+298,pandalus platyceros,10,40,6.007399085,Childress et al 1990 DSR 37: 929 - 949
+299,pandalus platyceros,5,40,5.363545048,Childress et al 1990 DSR 37: 929 - 949
+300,panulirus cygnus,15,1000,4.946666667,Crear and Fortteach 2001
+301,panulirus cygnus,23,1000,6.666666667,Crear and Fortteach 2001
+302,panulirus cygnus,31,1000,10.66666667,Crear and Fortteach 2001
+303,panulirus interruptus,20,NA,5.189740546,Ocampo et al 2003
+304,panulirus interruptus,27,NA,8.809000024,Ocampo et al 2003
+305,parabramis pekinensis,10,6.14,3.48370386,Winget 1969 BioBuill 136 301 - 312
+306,parabramis pekinensis,20,5.84,3.19439512,Winget 1969 BioBuill 136 301 - 312
+307,parabramis pekinensis,30,5.79,2.73576744,Winget 1969 BioBuill 136 301 - 312
+308,paralichthys dentatus,22,569,5.67,Caposella et al. 2012
+309,paralichthys dentatus,30,569,8.19,Caposella et al. 2012
+310,pecten maximus,10,1,3.8744211,Artigaud et al 2014
+311,pecten maximus,18,1,5.0388646,Artigaud et al 2014
+312,pecten maximus,25,1,7.6429837,Artigaud et al 2014
+313,penaeus aztecus,20,NA,12.26565786,Sanchez et al 1991 CompBioPhys 100A: 69 - 73
+314,penaeus aztecus,30,NA,16.2653289,Sanchez et al 1991 CompBioPhys 100A: 69 - 73
+315,penaeus vannamei,29,0.824326881,1.974381382,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+316,penaeus vannamei,28,1.347020324,1.801139911,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+317,penaeus vannamei,29,2.456978004,2.138628013,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+318,penaeus vannamei,26,3.442021921,2.084415948,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+319,penaeus vannamei,23,5.332412717,1.834592288,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+320,penaeus vannamei,22,7.769863486,1.802540798,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+321,penaeus vannamei,25,11.96679251,2.084722645,Palacioas et al. 1996 JAquatTrip 11: 59 - 65
+322,phorcosergia bisulcata,5,2.54,3.506666667,Cowles et al 1991 MarBiol 110:75:83
+323,phorcosergia bisulcata,10,2.54,5.226666667,Cowles et al 1991 MarBiol 110:75:83
+324,phorcosergia bisulcata,20,2.54,9.973333333,Cowles et al 1991 MarBiol 110:75:83
+325,pleuroncodes planipes,10,5,0.28,Quitin & Childress 1976 MarBiio 36: 327 - 324
+326,pleuroncodes planipes,15,5,0.3,Quitin & Childress 1976 MarBiio 36: 327 - 324
+327,pleuroncodes planipes,20,5,0.42,Quitin & Childress 1976 MarBiio 36: 327 - 324
+328,pleuroncodes planipes,25,5,0.63,Quitin & Childress 1976 MarBiio 36: 327 - 324
+329,salmo salar,18,425,11.644435,Remen et al. 2013
+330,salmo salar,16,383,9.950699,Remen et al. 2013
+331,salmo salar,12,460,8.256963,Remen et al. 2013
+332,salmo salar,6,501,6.35151,Remen et al. 2013
+333,salpa fusiformis,10,0.1865,1.9,Cetta et al 1986 MarBiol 91: 529 - 537
+334,salpa fusiformis,17,0.1865,3.4,Cetta et al 1986 MarBiol 91: 529 - 537
+335,sciaenops ocellatus,24,35.7,4.2,Ern et al. 2016
+336,sciaenops ocellatus,30,40,5.053333333,Ern et al. 2016
+337,scyliorhinus canicula,7,857,7.733333333,Butler & Taylor 1975
+338,scyliorhinus canicula,12,788,8.666666667,Butler & Taylor 1975
+339,scyliorhinus canicula,17,712,10.93333333,Butler & Taylor 1975
+340,sepia officinalis,18,NA,2.1,Zielinksi et al 2001
+341,sepia officinalis,22,NA,3.3,Zielinksi et al 2001
+342,sergia fulgens,5,1.06,3.493333333,Cowles et al 1991 MarBiol 110:75:83
+343,sergia fulgens,10,1.06,5.306666667,Cowles et al 1991 MarBiol 110:75:83
+344,sergia fulgens,20,1.06,11.6,Cowles et al 1991 MarBiol 110:75:83
+345,sergia grandis,14,0.713,4.4,Cowles et al 1991 MarBiol 110:75:83
+346,sergia grandis,20,0.713,6.266666667,Cowles et al 1991 MarBiol 110:75:83
+347,sergia tenuiremis,5,2.61,3.386666667,Cowles et al 1991 MarBiol 110:75:83
+348,sergia tenuiremis,10,2.61,4.253333333,Cowles et al 1991 MarBiol 110:75:83
+349,sergia tenuiremis,20,2.61,7.28,Cowles et al 1991 MarBiol 110:75:83
+350,stenobrachius leucopsarus,5,4.3,1.58490566,Torres et al 1979
+351,stenobrachius leucopsarus,10,4.4,2.641509434,Torres et al 1979
+352,styela plicata,10,20,18.32,Fisher 1976 BiolBull 151: 297 - 305
+353,styela plicata,12.5,20,16.76,Fisher 1976 BiolBull 151: 297 - 305
+354,styela plicata,15,20,16.02666667,Fisher 1976 BiolBull 151: 297 - 305
+355,styela plicata,19.5,20,14.37333333,Fisher 1976 BiolBull 151: 297 - 305
+356,styela plicata,26.5,20,12.89333333,Fisher 1976 BiolBull 151: 297 - 305
+357,styela plicata,28.6,20,13.32,Fisher 1976 BiolBull 151: 297 - 305
+358,styela plicata,32,20,9.413333333,Fisher 1976 BiolBull 151: 297 - 305
+359,systellaspis debilis,7,1.118,3.333333333,Davenport & Truman 1985 CompBiolPhys 81:851-863
+360,systellaspis debilis,14,1.118,4,Davenport & Truman 1985 CompBiolPhys 81:851-863
+361,systellaspis debilis,20,1.118,4.933333333,Davenport & Truman 1985 CompBiolPhys 81:851-863
+362,systellaspis debilis,5,1.22,3.226666667,Davenport & Truman 1985 CompBiolPhys 81:851-863
+363,systellaspis debilis,10,1.22,4.666666667,Davenport & Truman 1985 CompBiolPhys 81:851-863
+364,systellaspis debilis,20,1.22,5.8,Davenport & Truman 1985 CompBiolPhys 81:851-863
+365,tarletonbeania crenularis,8,NA,3.962264151,Torres et al 1979
+366,tarletonbeania crenularis,13,NA,4.622641509,Torres et al 1979
+367,tautogolabrus adspersus,8,135.6,4.5307438,Korkum & Gamperl 2009
+368,tautogolabrus adspersus,1,98.8,3.5780173,Korkum & Gamperl 2009
+369,tigriopus brevicornis,20,2.00E-04,1.2,McAllen et al. 1999
+370,tigriopus brevicornis,30,2.00E-04,2.133333333,McAllen et al. 1999
+371,zoarces viviparus,12.25,47.43,4.4684722,Portner & Knust 2008
+372,zoarces viviparus,13.05,47.43,4.214983649,Portner & Knust 2008
+373,zoarces viviparus,14.55,47.43,5.139735018,Portner & Knust 2008
+374,zoarces viviparus,15.45,47.43,5.697143091,Portner & Knust 2008
+375,zoarces viviparus,16.95,47.43,7.186198053,Portner & Knust 2008
+376,zoarces viviparus,18.35,47.43,8.735834983,Portner & Knust 2008
+377,anoplopoma fimbria,12,675,1.145958538,#N/A
+378,menidia menidia,25,5.01,3.287501567,#N/A
+379,menidia menidia,18.5,4.98,2.106323497,#N/A
+380,menidia menidia,12,4.19,1.516393635,#N/A
+381,pseudopleuronectes americanus,25,1.95,2.645411417,#N/A
+382,pseudopleuronectes americanus,18.5,1.8,1.970431658,#N/A
+383,pseudopleuronectes americanus,12,2.45,1.299765973,#N/A
+384,sphoeroides maculatus,25,2.1,3.492970415,#N/A
+385,sphoeroides maculatus,18.5,3,2.083674857,#N/A
+386,sphoeroides maculatus,12,3.3,1.378539668,#N/A
+387,salmo salar,6,513,6.048882609,Remen et al. 2013
+388,salmo salar,6,513,6.32892347,Remen et al. 2013
+389,salmo salar,12,513,7.511365656,Remen et al. 2013
+390,salmo salar,12,513,8.227030155,Remen et al. 2013
+391,salmo salar,12,513,8.631536175,Remen et al. 2013
+392,salmo salar,18,513,10.46743005,Remen et al. 2013
+393,salmo salar,18,513,11.27644664,Remen et al. 2013
+394,salmo salar,18,513,11.68095493,Remen et al. 2013
+395,salmo salar,18,513,13.01894391,Remen et al. 2013
