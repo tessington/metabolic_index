@@ -4,6 +4,8 @@ library(gridExtra)
 library(Matrix)
 library(tmbstan)
 library(knitr)
+library(egg)
+library(cowplot)
 
 source("code/fit_model_funs.R")
 theme_set(theme_bw(base_size = 16))
@@ -27,7 +29,7 @@ make_plot<- function(sims) {
                  level = 0.8,
                  linewidth = 1.5,
                  col = "black") +
-    geom_point() + 
+    geom_point(size = 0.5) + 
     scale_fill_manual(palette = colpal) +
     labs(x = expression(log(A[o])), y = expression(E[o])) + 
     theme(axis.line.x.top = element_blank(),
