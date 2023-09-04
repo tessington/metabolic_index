@@ -1,0 +1,3 @@
+load("/Users/essing/Library/CloudStorage/Dropbox/Desktop/Rcode/Metabolic_Index/data/alldata_taxonomy.RDS")
+alllata_taxonomy
+ls()

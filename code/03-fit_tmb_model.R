@@ -27,6 +27,9 @@ source("code/fit_model_funs.R")
 
 # Get data with  taxonomy tree ####
 all.dat <- load_data()
+all.dat$Source <- factor(all.dat$Source)
+all.dat$SourceNo <- as.numeric(all.dat$Source)
+n_p <- length(unique(all.dat$SourceNo))
 
 # describe the data a bit - how many unique  order per class, families per order, etc. ####
 class_summary <- all.dat %>%
@@ -56,9 +59,8 @@ kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
-all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
+all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
 taxa.list <- c("Order", "Family", "Genera", "Species")
-
 
 ## Create new ParentChild matrix for reduced taxonomic structure ####
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
@@ -79,7 +81,8 @@ data <- list(PC_gz = PC_gz,
              logW = log(all.dat$W),
              taxa_id = g_i_i -1,
              minuslogpo2 = all.dat$minuslogpo2,
-             spc_in_PCgz = spc_in_PC_gz -1
+             spc_in_PCgz = spc_in_PC_gz -1,
+             paper = all.dat$SourceNo - 1
              
 )
 
@@ -87,9 +90,11 @@ parameters = list(alpha_j = rep(0,n_j),
                   L_z = rep(1, 6),
                   log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
-                  logsigma = 0
+                  beta_p = rep(0, times = n_p),
+                  logsigma = 0,
+                  logsigma_p = 0
 )
-Random <- c("beta_gj")
+Random <- c("beta_gj", "beta_p")
 model <- "hierarchical_mi"
 compile(paste0("code/TMB/", model, ".cpp"))
 dyn.load(dynlib(paste0("code/TMB/",model)))
@@ -112,8 +117,8 @@ saveRDS(list(obj = obj, opt = opt, rep = rep), "analysis/modelfit.RDS")
 
 re <- summary(rep, "random")
 fixef <- summary(rep, "fixed")
-beta_mle <- matrix(re[grep(rownames(re), pattern = "beta"),1], nrow = n_g, ncol = 3, byrow = F)
-beta_se <- matrix(re[grep(rownames(re), pattern = "beta"),2], nrow = n_g, ncol = 3, byrow = F)
+beta_mle <- matrix(re[grep(rownames(re), pattern = "beta_gj"),1], nrow = n_g, ncol = 3, byrow = F)
+beta_se <- matrix(re[grep(rownames(re), pattern = "beta_gj"),2], nrow = n_g, ncol = 3, byrow = F)
 
 
 
@@ -150,7 +155,7 @@ if (plot_est) {
 ## Plot Orders #####
   Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=2)
   Aoploto <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
-  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
+  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
   Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
   Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
                              axis.title.y = element_blank()
@@ -168,7 +173,7 @@ if (plot_est) {
   ##Plot Families #####
   Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
   Aoplotf <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
-  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
+  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
   Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
   Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
                              axis.title.y = element_blank()
@@ -185,7 +190,7 @@ family_plot <-  ggarrange(Aoplotf,
 ##Plot Genera #####
 Est.2.plot <- dplyr::filter(GeneraEst, NoSpecies >=2)
 Aoplotg <- plotest(Est.2.plot, logAo, Genera, logAomin, logAomax)
-Aoplotg <- Aoplotg + xlab(expression("log(A"[o]~ ")")) + xlim(c(2, 4.5))
+Aoplotg <- Aoplotg + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
 Eoplotg <- plotest(Est.2.plot, Eo, Genera, Eomin, Eomax)
 Eoplotg <- Eoplotg + theme(axis.text.y = element_blank(),
                            axis.title.y = element_blank()
@@ -225,13 +230,13 @@ SpeciesEst <- make_species_df(level = 4,
                          ParentChild_gz,
                          groups = taxa.list)
 
-SpeciesEst$Ao_atm = exp(SpeciesEst$logAo)
+SpeciesEst$Ao = exp(SpeciesEst$logAo)
 SpeciesEst$Aoind <- NA
 SpeciesEst$Eoind <- NA
 
 
 ## Load previous fits ####
-spc.fits <- readRDS(file = "analysis/species_estimates.RDS")
+spc.fits <- readRDS(file = "analysis/ind_species_estimates.RDS")
 
 ## Combine into one df ####
 for (i in 1:nrow(spc.fits)) {
@@ -241,7 +246,7 @@ for (i in 1:nrow(spc.fits)) {
   SpeciesEst$Eoind[spc.index] <- spc.fits$Eo[i]
   }
 ## Make Plot ####
-aoplot <- ggplot(SpeciesEst, aes(x = Aoind, y = Ao_atm)) +
+aoplot <- ggplot(SpeciesEst, aes(x = Aoind, y = Ao)) +
   geom_point(size = 2.5) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.25) +
   xlab(expression("A"[o]~ "estimated independently")) +

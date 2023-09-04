@@ -3,8 +3,8 @@
 
 #### Get all data ####
 all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
-# remove data where there is no body size data
-all.dat <- dplyr::filter(all.dat, !is.na(W))
+# set W to 1 if NA
+all.dat$W[which(is.na(all.dat$W))] <- 1
 #  Add in "spc' when no species is given
 naIndex <- which(is.na(all.dat$Species))
 for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
@@ -26,7 +26,7 @@ kb <-  8.617333262145E-5
 tref <- 15
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
-all.dat$minuslogpo2 <- - log(all.dat$Pcrit_atm) # fit using pO2 in atm
+all.dat$minuslogpo2 <- - log(all.dat$Pcrit) # fit using pO2 in atm
 
 
 
@@ -69,7 +69,7 @@ for (i in 1:length(spc.list)) {
 }
 
 # Save result into RDS file
-saveRDS(object = spc.est, file = "Data/species_estimates.RDS")
+saveRDS(object = spc.est, file = "analysis/ind_species_estimates.RDS")
 
   
   

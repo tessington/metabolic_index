@@ -60,30 +60,33 @@ species_summary <- all.dat %>%
 
 # simulate trait values for out of sample species calling sim_taxa() ####
 sim_betas <- sim_taxa(obj = obj,
-                      ParentChild_gz = ParentChild_gz,
-                      Groups = c(order_summary$Order,
-                                 family_summary$Family,
-                                 genera_summary$Genera,
-                                 species_summary$Species
-                                 )
+                      ParentChild_gz = ParentChild_gz
                       )
 
  # Plot by order ####
- 
+
+xlims <- c(-2, -0.5)
+ylims <- c(-0.05, 0.85)
+vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
+
  groups.2.use <- dplyr::filter(order_summary, NoFamily >=2)$Order
   dorder<-  ggplot(data =dplyr::filter(sim_betas, level == 1, Group %in% groups.2.use),
                   aes( x = logAo, y = Eo)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                            show.legend = F) +
-    xlim(1.15, 5.5) + 
-    ylim(-0.275, 0.85) +  
+    scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+                                                              breaks = vticks)) +
+    ylim(ylims) +  
     stat_ellipse(type = "norm",
                 level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 2, ncol = 3)
+   facet_wrap(vars(Group), nrow = 2, ncol = 3) + 
+    theme(axis.line.x.top = element_line(color = "black"),
+          axis.ticks.x.top = element_line(color = "black"),
+          axis.text.x.top = element_text(color = "black"))
  dorder
  
  # Plot by family ####
@@ -91,15 +94,15 @@ sim_betas <- sim_taxa(obj = obj,
  groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
  dfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
                   aes( x = logAo, y = Eo)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                            show.legend = F) +
-   ylim(-0.275, 0.85) +  
+   ylim(ylims) +  
    stat_ellipse(type = "norm",
                 level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
-   scale_x_continuous(limits = c(1.2, 5.35), sec.axis = sec_axis(~exp(-.), name="V (atm)", 
-                                                                 breaks = c(0.3, 0.1, 0.03, 0.01, 0.003))) +
+   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (atm)", 
+                                                                 breaks = vticks)) +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
    facet_wrap(vars(Group), nrow = 4, ncol = 4) +
@@ -124,10 +127,10 @@ sim_betas <- sim_taxa(obj = obj,
  groups.2.use <- dplyr::filter(genera_summary, NoSpecies >=2)$Genera
  dgenera<-  ggplot(data =dplyr::filter(sim_betas, level == 3, Group %in% groups.2.use),
                    aes( x = logAo, y = Eo)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                            show.legend = F) +
-   xlim(1.15, 5.5) + 
-   ylim(-0.275, 0.85) + 
+   xlim(xlims) + 
+   ylim(ylims) + 
    stat_ellipse(type = "norm",
                 level = 0.9,
                 linewidth = 1.5,
@@ -138,7 +141,7 @@ sim_betas <- sim_taxa(obj = obj,
  dgenera
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
- savefiles <- F
+ savefiles <- T
  if (savefiles) {
  
    ggsave(plot = dorder,
@@ -152,7 +155,7 @@ sim_betas <- sim_taxa(obj = obj,
           width = 1184*2,
           height = 1184*2,
           units = "px")
-   ggsave(plot = dfamily,
+   ggsave(plot = dgenera,
           filename = "figures/genera_plot.png",
           width = 1184*2,
           height = 745*2,

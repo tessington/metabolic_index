@@ -157,15 +157,15 @@ load_data <- function() {
 }
 
 # Function to simulate taxa within each taxonomic group ####
-sim_taxa <- function(obj, ParentChild_gz, Groups) {
+sim_taxa <- function(obj, ParentChild_gz) {
   ## Load mcmc output ####
   sims <- readRDS(file = "analysis/mcmcoutput.RDS")
   
   ## extract mcmc output ####
-  alpha_sim <- extract(sims, "alpha_j")$alpha_j
-  beta_gj_sim <- extract(sims, "beta_gj")$beta_gj
-  lambda_sim<- exp(extract(sims, "log_lambda")$log_lambda)
-  L_z_sim <- extract(sims, "L_z")$L_z
+  alpha_sim <- rstan::extract(sims, "alpha_j")$alpha_j
+  beta_gj_sim <- rstan::extract(sims, "beta_gj")$beta_gj
+  lambda_sim<- exp(rstan::extract(sims, "log_lambda")$log_lambda)
+  L_z_sim <- rstan::extract(sims, "L_z")$L_z
   ## setup simulation ####
   parnames <- names(obj$env$last.par.best)
   n.sims <- nrow(alpha_sim)
@@ -185,7 +185,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
   nreps <-  sum(ngroups_array) + n_gj
   nlevels <- max(ParentChild_gz$ChildTaxon) - 1
   beta_sim_list <- list()
-  
+  Groups <- gsub(".*_","",ParentChild_gz$ChildName)
   # Iterate through each mcmc iteration
   for (sim in 1:n.sims) {
     #### Extract the "sim"th MCMC simulation
@@ -213,7 +213,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
     for(r in 1:3){
       for(c in 1:3){
         if(r == c) {
-          L[r,c] = exp(L_z_random[Count])
+          L[r,c] = L_z_random[Count]
           Count<- Count + 1
         }
         if(r>c){
@@ -242,7 +242,7 @@ sim_taxa <- function(obj, ParentChild_gz, Groups) {
       beta_sim_i[[l]] <- tmp_df
     }
     
-    # add out of sample classes
+    # add out of sample orders
     lambdasum <- sum(lambda_random) + 1
     tmpsims <- alpha_j_random + rmvnorm(n =  1,
                                         mean = rep(0, 3),
