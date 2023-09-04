@@ -14,22 +14,23 @@ theme_update(panel.grid.major = element_blank(),
              strip.background = element_blank())
 
 make_plot<- function(sims) {
-  xlim <- c(1, 6)
-  ylim <- c(-0.25, 0.9)
+  xlim <- c(-2.5, -0.5)
+  ylim <- c(-0.15, 0.9)
+  vticks <- c(2, 3, 4, 5, 6, 7, 9, 11, 13)
   colpal <- colorRampPalette(c("white", "#deebf7", "#9ecae1","#3182bd"))
   
   p2d <-  ggplot(data =sims,
                  aes( x = logAo, y = Eo)) + 
-    geom_density_2d_filled( stat = "density_2d_filled", h = c(1, 0.2),
+    geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                             show.legend = F) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (atm)", 
-                                                          breaks = c(0.3, 0.1, 0.03, 0.01, 0.003))) +
+    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+                                                          breaks = vticks)) +
     ylim(ylim) + 
     stat_ellipse(type = "norm",
                  level = 0.8,
                  linewidth = 1.5,
                  col = "black") +
-    geom_point(size = 0.5) + 
+    geom_point(size = 0.5, alpha = 0.25) + 
     scale_fill_manual(palette = colpal) +
     labs(x = expression(log(A[o])), y = expression(E[o])) + 
     theme(axis.line.x.top = element_blank(),
@@ -43,8 +44,8 @@ make_plot<- function(sims) {
     geom_density(fill = "#9ecae1") +
     ylab("Density") + 
     scale_y_continuous(n.breaks = 3) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (atm)", 
-                                                               breaks = c(0.3, 0.1, 0.03, 0.01, 0.003))) +
+    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+                                                               breaks = vticks)) +
     
     theme(axis.line.x.top = element_blank(),
           axis.ticks.x.top = element_line(color = "black"),
@@ -66,7 +67,8 @@ make_plot<- function(sims) {
                  aes( x =n)) + 
     geom_density(fill = "#9ecae1") +
     ylab("Density") + 
-    scale_y_continuous(n.breaks = 3)
+    scale_y_continuous(n.breaks = 3) +
+    scale_x_continuous(limits = c(-0.75, 0.5))
   
   pblank <- ggplot() + geom_blank() + theme_void()
   aoeo <- ggarrange(pao, pblank,p2d, peo,
