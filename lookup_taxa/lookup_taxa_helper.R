@@ -149,6 +149,36 @@ lookup_taxa <- function(taxa.name) {
     cat("Covariance Matrix \n")
     print(knitr::kable(cov_jj))
     allplot <- make_plot(sims)
+    # print inner 90% intervals
+    logAoint <- quantile(logao.taxa, probs = c(0.05, 0.95))
+    Vint <- exp(-logAoint)
+    Eoint <- quantile(eo.taxa, probs = c(0.05, 0.95))
+    nint <- quantile(n.taxa, probs = c(0.05, 0.95))
+    cat(paste0("Inner 90% interval for V is (", 
+               rev(round(Vint, 3))[1], 
+               " ",
+               rev(round(Vint, 3))[2],
+               ")"
+               ))
+    cat("\n")
+    cat(paste0("Inner 90% interval for Eo is ", 
+               round(Eoint, 3)[1],
+               " ",
+               round(Eoint, 3)[2],
+               ")"
+               ))
+        
+    cat("\n")
+    cat(paste0("Inner 90% interval for n is ", 
+               round(nint, 3)[1],
+               " ",
+               round(nint, 3)[2],
+               ")"
+    ))
+    
+    
+                         
+  
     options(warn = 0)
     return(allplot)
   }
