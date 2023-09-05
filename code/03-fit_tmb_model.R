@@ -213,12 +213,12 @@ dev.off()
 
   ## multiplot of n #####
 pdf(file = "figures/n_order_family.pdf",
-    width = 10,
-    height = 8)
+    width = 11,
+    height = 6)
 plot_grid(nplotorder, nplotfamily,
           labels = "auto")
 
-  dev.off()
+dev.off()
   
 }
 
@@ -261,3 +261,9 @@ grid.arrange(aoplot, eoplot, ncol = 2)
 
 # save species - level estimates 
 write.csv(x = SpeciesEst, "analysis/species_estimates.csv", row.names = F)
+
+# plot study effects
+beta_p <- data.frame(re[grep(rownames(re), pattern = "beta_p"),])
+
+ggplot(beta_p, aes(x = Estimate, weight = Std..Error)) +
+  geom_histogram(bins = 20)

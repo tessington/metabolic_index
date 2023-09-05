@@ -33,14 +33,32 @@ for (i in 1:nrow(order_summary)) {
       MAR = 2,
       FUN = sd
     )
+  order.low <- apply(
+    X = cbind(sims$logAo, sims$n, sims$Eo),
+    MAR = 2,
+    FUN = quantile,
+    probs = 0.05
+  )
+  order.high <- apply(
+    X = cbind(sims$logAo, sims$n, sims$Eo),
+    MAR = 2,
+    FUN = quantile,
+    probs = 0.95
+  )
   tmp_df <- tibble(
     Group = taxa.name,
     logAo = order.medians[1],
     logAosd = order.sds[1],
+    logAolow = order.low[1],
+    logAohigh = order.high[1],
     n = order.medians[2],
     nsd = order.sds[2],
+    nlow = order.low[2],
+    nhigh = order.high[2],
     Eo = order.medians[3],
     Eosd = order.sds[3],
+    Eolow = order.low[3],
+    Eohigh = order.high[3],
     Nspecies = dplyr::filter(order_summary, Order == taxa.name)$NSpecies,
     level = "Order"
   )
@@ -69,14 +87,33 @@ for (i in 1:nrow(order_summary)) {
         MAR = 2,
         FUN = sd
       )
+    family.low <- apply(
+      X = cbind(sims$logAo, sims$n, sims$Eo),
+      MAR = 2,
+      FUN = quantile,
+      probs = 0.05
+    )
+    family.high <- apply(
+      X = cbind(sims$logAo, sims$n, sims$Eo),
+      MAR = 2,
+      FUN = quantile,
+      probs = 0.95
+    )
+    
     tmp_df <- tibble(
       Group = family.name,
       logAo = family.medians[1],
       logAosd = family.sds[1],
+      logAolow = family.low[1],
+      logAohigh = family.high[1],
       n = family.medians[2],
       nsd = family.sds[2],
+      nlow = family.low[2],
+      nhigh = family.high[2],
       Eo =  family.medians[3],
       Eosd = family.sds[3],
+      Eolow = family.low[3],
+      Eohigh = family.high[3],
       Nspecies = dplyr::filter(family_summary, Family == family.name)$NSpecies,
       level = "Family"
     )
@@ -91,3 +128,11 @@ taxa_table <- do.call("rbind", taxa_summary)
 
 # save as csv file
 write.csv(x = taxa_table, file = "analysis/taxa_table.csv")
+
+family_sum <- taxa_table %>%
+  filter (level == "Family")
+family_sum$Vhigh = exp(-family_sum$logAolow)
+family_sum$Vlow = exp(-family_sum$logAohigh)
+
+
+

@@ -101,7 +101,7 @@ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
                 level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
-   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (atm)", 
+   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
                                                                  breaks = vticks)) +
    scale_fill_manual(palette = colpal) +
    labs(x = expression(log(A[o])), y = expression(E[o])) +
