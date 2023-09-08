@@ -8,9 +8,9 @@ make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   
   
   Est <- tibble("{groupname}" := GroupNames,
-                logAo = beta_mle[group_index,1],
-                logAomin = beta_mle[group_index,1] - beta_se[group_index,1],
-                logAomax = beta_mle[group_index,1]  + beta_se[group_index,1],
+                logV = beta_mle[group_index,1],
+                logVmin = beta_mle[group_index,1] - beta_se[group_index,1],
+                logVmax = beta_mle[group_index,1]  + beta_se[group_index,1],
                 Eo = beta_mle[group_index,3],
                 Eomin = beta_mle[group_index,3] - beta_se[group_index,3],
                 Eomax = beta_mle[group_index,3] + beta_se[group_index,3],
@@ -29,8 +29,8 @@ make_species_df <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   
   
   Est <- tibble("{groupname}" := GroupNames,
-                logAo = beta_mle[group_index,1],
-                logAoSE = beta_se[group_index,1],
+                logV = beta_mle[group_index,1],
+                logVSE = beta_se[group_index,1],
                 Eo = beta_mle[group_index,3],
                 EoSE = beta_se[group_index,3],
                 n = beta_mle[group_index,2],
@@ -122,29 +122,31 @@ return(list(ParentChild_gz = ParentChild_gz,
 
 load_data <- function() {
   all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
-  # remove set W = 1 if there is no body size data
-  all.dat$W[which(is.na(all.dat$W))] <- 1
+  
+  # remove data with missing body size
+  all.dat <- all.dat %>%
+    filter(!is.na(W))
 # when a species isn't listed, make a genus_spp.
     naIndex <- which(is.na(all.dat$Species))
   for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
   
   # get median mass for each species
-  species.median.mass <- all.dat %>%
-    group_by(Species) %>%
-    summarize(Wmed = median(W))
+  #species.median.mass <- all.dat %>%
+  #  group_by(Species) %>%
+  #  summarize(Wmed = median(W))
   # get median T for each species
-  species.median.temp <- all.dat %>%
-    group_by(Species) %>%
-    summarize(Tmed = median(Temp))
+  #species.median.temp <- all.dat %>%
+  #  group_by(Species) %>%
+  #  summarize(Tmed = median(Temp))
   
-  Tref <- median(species.median.temp$Tmed)
+  #Tref <- median(species.median.temp$Tmed)
   # divide Actual mass by median mass for that species
-  for (i in 1:nrow(species.median.mass)) {
-    spc.index <- which(all.dat$Species == species.median.mass$Species[i])
-    all.dat$W[spc.index] <- all.dat$W[spc.index] / species.median.mass$Wmed[i]
-  }
+  #for (i in 1:nrow(species.median.mass)) {
+  #  spc.index <- which(all.dat$Species == species.median.mass$Species[i])
+  #  all.dat$W[spc.index] <- all.dat$W[spc.index] / species.median.mass$Wmed[i]
+  #}
   # for species with only 1 mass, replace the NA with 1
-  all.dat$W[is.na(all.dat$W)] = 1
+  #all.dat$W[is.na(all.dat$W)] = 1
   # change name of incertae sedis orders to one name
   tmp.index <- which(all.dat$Order == "Eupercaria incertae sedis")
   all.dat$Order[tmp.index] <- "Eupercaria"
@@ -197,7 +199,7 @@ sim_taxa <- function(obj, ParentChild_gz) {
     
     # Place in single matrix with mean trait values as rows, including groupname as a fourth column ####
     group_sims <- tibble(
-      logAo = beta_gj_random[1:nreps],
+      logV = beta_gj_random[1:nreps],
       n = beta_gj_random[(nreps +1):(2* nreps)],
       Eo = beta_gj_random[(2 * nreps + 1):(3*nreps)],
       Group = Groups,
@@ -234,7 +236,7 @@ sim_taxa <- function(obj, ParentChild_gz) {
       tmpsims <- level_sims[,1:3] + rmvnorm(n =  ngroups_array[l],
                                             mean = rep(0, 3),
                                             sigma = lambdasum * sigma) 
-      tmp_df <- tibble(logAo =tmpsims[,1],
+      tmp_df <- tibble(logV =tmpsims[,1],
                        n = tmpsims[,2],
                        Eo = tmpsims[,3],
                        Group = dplyr::filter(group_sims, level==l)$Group,
@@ -247,7 +249,7 @@ sim_taxa <- function(obj, ParentChild_gz) {
     tmpsims <- alpha_j_random + rmvnorm(n =  1,
                                         mean = rep(0, 3),
                                         sigma = lambdasum * sigma) 
-    tmp_df <- tibble(logAo =tmpsims[,1],
+    tmp_df <- tibble(logV =tmpsims[,1],
                      n = tmpsims[,2],
                      Eo = tmpsims[,3],
                      Group = NA,

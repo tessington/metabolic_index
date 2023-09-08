@@ -77,7 +77,7 @@
     vector<Type> Prediction_j( n_j );
     vector<Type> Deviation_j( n_j );
     matrix<Type> tmpCov_jj( n_j, n_j );
-    vector<Type> Ao(n_i);
+    vector<Type> V(n_i);
     vector<Type> n_pow(n_i);
     vector<Type> Eo(n_i);
     matrix<Type> spc_ij(n_i, n_j);
@@ -102,9 +102,9 @@
     }
     
     
+  
     
-    
-    Ao = spc_ij.col(0);
+    V = spc_ij.col(0);
     n_pow = spc_ij.col(1);
     Eo = spc_ij.col(2);
     vector<Type> mu( n_d );
@@ -144,9 +144,10 @@
     // random effects for paper
     jnll_comp(0) += -sum(dnorm(beta_p, 0, sigma_p, true) );
 
+    
     // Probability of the data
     for( int id=0; id<n_d; id++){
-     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) + log(Ao( taxa_id( id ) )) + beta_p( paper( id ) );
+     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) - log(V( taxa_id( id ) )) + beta_p( paper( id ) );
     }
     
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );

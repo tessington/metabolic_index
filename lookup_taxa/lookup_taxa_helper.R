@@ -14,16 +14,16 @@ theme_update(panel.grid.major = element_blank(),
              strip.background = element_blank())
 
 make_plot<- function(sims) {
-  xlim <- c(-2.5, -0.5)
-  ylim <- c(-0.15, 0.9)
+  xlim <- c(0.5, 2.5)
+  ylim <- c(-0.35, 0.2)
   vticks <- c(2, 3, 4, 5, 6, 7, 9, 11, 13)
   colpal <- colorRampPalette(c("white", "#deebf7", "#9ecae1","#3182bd"))
   
   p2d <-  ggplot(data =sims,
-                 aes( x = logAo, y = Eo)) + 
+                 aes( x = logV, y = n)) + 
     geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                             show.legend = F) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(.), name="V (kPa)", 
                                                           breaks = vticks)) +
     ylim(ylim) + 
     stat_ellipse(type = "norm",
@@ -32,19 +32,19 @@ make_plot<- function(sims) {
                  col = "black") +
     geom_point(size = 0.5, alpha = 0.25) + 
     scale_fill_manual(palette = colpal) +
-    labs(x = expression(log(A[o])), y = expression(E[o])) + 
+    labs(x = "log(V)", y = "n") + 
     theme(axis.line.x.top = element_blank(),
           axis.ticks.x.top = element_line(color = "black"),
           axis.text.x.top = element_blank(),
           axis.title.x.top = element_blank())
     
   
-  pao <- ggplot(data =sims,
-                 aes( x =logAo)) + 
+  pV <- ggplot(data =sims,
+                 aes( x =logV)) + 
     geom_density(fill = "#9ecae1") +
     ylab("Density") + 
     scale_y_continuous(n.breaks = 3) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(.), name="V (kPa)", 
                                                                breaks = vticks)) +
     
     theme(axis.line.x.top = element_blank(),
@@ -54,8 +54,8 @@ make_plot<- function(sims) {
           axis.title.x.bottom = element_blank())
   
   
-  peo <- ggplot(data =sims,
-                 aes( x =Eo)) + 
+  pn <- ggplot(data =sims,
+                 aes( x =n)) + 
     geom_density(fill = "#9ecae1") +
     xlim(ylim) +
     ylab("Density") +
@@ -63,19 +63,20 @@ make_plot<- function(sims) {
           axis.title.y = element_blank()) +
     coord_flip()
   
-  pn <- ggplot(data =sims,
-                 aes( x =n)) + 
-    geom_density(fill = "#9ecae1") +
+  pEo <- ggplot(data =sims,
+                 aes( x =Eo)) + 
+    geom_density(fill = "#9ecae1", adjust = 1.2) +
     ylab("Density") + 
+    xlab(expression(E[o])) +
     scale_y_continuous(n.breaks = 3) +
-    scale_x_continuous(limits = c(-0.75, 0.5))
+    scale_x_continuous(limits = c(-0.2, 0.9))
   
   pblank <- ggplot() + geom_blank() + theme_void()
-  aoeo <- ggarrange(pao, pblank,p2d, peo,
+  vn <- ggarrange(pV, pblank,p2d, pn,
             widths = c(4,1),
             heights = c(1,4)
             )
-  allplot <- plot_grid(aoeo, pn, labels = "auto", nrow = 2, rel_heights = c(5,2))
+  allplot <- plot_grid(vn, pEo, labels = "auto", nrow = 2, rel_heights = c(5,2))
   return(allplot)
 }
 
@@ -91,18 +92,18 @@ lookup_taxa <- function(taxa.name) {
     sims <- dplyr::filter(sim_beta, Group == taxa.name)
     
     # retrieve posterior medians
-    logao.taxa <- sims$logAo
+    logV.taxa <- sims$logV
     n.taxa <- sims$n
     eo.taxa <- sims$Eo
     
-    ao.med <- median(logao.taxa)
+    V.med <- median(logV.taxa)
     n.med <- median(n.taxa)
     eo.med <- median(eo.taxa)
     
-    cov_jj <- cov(cbind(logao.taxa, n.taxa, eo.taxa))
+    cov_jj <- cov(cbind(logV.taxa, n.taxa, eo.taxa))
     cat(paste("Simulation medians for", taxa.name, "\n"))
     
-    medlist <- data.frame(logAo = c(ao.med, sd(logao.taxa)),
+    medlist <- data.frame(logV = c(V.med, sd(logV.taxa)),
                           n = c(n.med, sd(n.taxa)),
                           Eo = c(eo.med, sd(eo.taxa))
     )
@@ -112,10 +113,10 @@ lookup_taxa <- function(taxa.name) {
     print(knitr::kable(medlist))
     cat("\n")
     cov_jj <- as.data.frame(cov_jj)
-    colnames(cov_jj) <- rownames(cov_jj) <- c("log Ao", "n", "Eo")
+    colnames(cov_jj) <- rownames(cov_jj) <- c("log V", "n", "Eo")
     cat("Covariance Matrix \n")
     print(knitr::kable(cov_jj))
-    make_plot(sims)
+    allplot <- make_plot(sims)
     options(warn = 0)
   }
   if(!lookup.taxa) {
@@ -125,18 +126,18 @@ lookup_taxa <- function(taxa.name) {
     options(warn = -1)
     sims <- dplyr::filter(sim_beta, is.na(Group))
     # retrieve posterior medians
-    logao.taxa <- sims$logAo
+    logV.taxa <- sims$logV
     n.taxa <- sims$n
     eo.taxa <- sims$Eo
     
-    ao.med <- median(logao.taxa)
+    V.med <- median(logV.taxa)
     n.med <- median(n.taxa)
     eo.med <- median(eo.taxa)
     
-    cov_jj <- cov(cbind(logao.taxa, n.taxa, eo.taxa))
+    cov_jj <- cov(cbind(logV.taxa, n.taxa, eo.taxa))
     cat(paste("Simulation medians for all Classes \n"))
     
-    medlist <- data.frame(logAo = c(ao.med, sd(logao.taxa)),
+    medlist <- data.frame(logV = c(V.med, sd(logV.taxa)),
                           n = c(n.med, sd(n.taxa)),
                           Eo = c(eo.med, sd(eo.taxa))
     )
@@ -145,43 +146,42 @@ lookup_taxa <- function(taxa.name) {
     print(knitr::kable(medlist))
     cat("\n")
     cov_jj <- as.data.frame(cov_jj)
-    colnames(cov_jj) <- rownames(cov_jj) <- c("log Ao", "n", "Eo")
+    colnames(cov_jj) <- rownames(cov_jj) <- c("log V", "n", "Eo")
     cat("Covariance Matrix \n")
     print(knitr::kable(cov_jj))
     allplot <- make_plot(sims)
-    # print inner 90% intervals
-    logAoint <- quantile(logao.taxa, probs = c(0.05, 0.95))
-    Vint <- exp(-logAoint)
-    Eoint <- quantile(eo.taxa, probs = c(0.05, 0.95))
-    nint <- quantile(n.taxa, probs = c(0.05, 0.95))
-    cat(paste0("Inner 90% interval for V is (", 
-               rev(round(Vint, 3))[1], 
-               " ",
-               rev(round(Vint, 3))[2],
-               ")"
-               ))
-    cat("\n")
-    cat(paste0("Inner 90% interval for Eo is ", 
-               round(Eoint, 3)[1],
-               " ",
-               round(Eoint, 3)[2],
-               ")"
-               ))
-        
-    cat("\n")
-    cat(paste0("Inner 90% interval for n is ", 
-               round(nint, 3)[1],
-               " ",
-               round(nint, 3)[2],
-               ")"
-    ))
-    
-    
-                         
   
     options(warn = 0)
-    return(allplot)
+  
   }
+  # print inner 90% intervals
+  logVint <- quantile(logV.taxa, probs = c(0.05, 0.95))
+  Vint <- exp(logVint)
+  Eoint <- quantile(eo.taxa, probs = c(0.05, 0.95))
+  nint <- quantile(n.taxa, probs = c(0.05, 0.95))
+  cat(paste0("Inner 90% interval for V is (", 
+             round(Vint, 3)[1], 
+             " ",
+             round(Vint, 3)[2],
+             ")"
+  ))
+  cat("\n")
+  cat(paste0("Inner 90% interval for Eo is ", 
+             round(Eoint, 3)[1],
+             " ",
+             round(Eoint, 3)[2],
+             ")"
+  ))
+  
+  cat("\n")
+  cat(paste0("Inner 90% interval for n is ", 
+             round(nint, 3)[1],
+             " ",
+             round(nint, 3)[2],
+             ")"
+  ))
+  return(allplot)
+  
 }
 
 print.genera <- function() {

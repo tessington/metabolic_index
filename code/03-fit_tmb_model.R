@@ -27,9 +27,13 @@ source("code/fit_model_funs.R")
 
 # Get data with  taxonomy tree ####
 all.dat <- load_data()
+
+
 all.dat$Source <- factor(all.dat$Source)
 all.dat$SourceNo <- as.numeric(all.dat$Source)
 n_p <- length(unique(all.dat$SourceNo))
+
+
 
 # describe the data a bit - how many unique  order per class, families per order, etc. ####
 class_summary <- all.dat %>%
@@ -57,6 +61,8 @@ print(genera_summary, n = 70)
 
 kb <-  8.617333262145E-5
 tref <- 15
+wref <- 5
+all.dat$W <- all.dat$W/wref
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
@@ -154,8 +160,8 @@ if (plot_est) {
   
 ## Plot Orders #####
   Est.2.plot <- dplyr::filter(OrderEst, NoSpecies >=2)
-  Aoploto <- plotest(Est.2.plot, logAo, Order, logAomin, logAomax)
-  Aoploto <- Aoploto + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
+  Vploto <- plotest(Est.2.plot, logV, Order, logVmin, logVmax)
+  Vploto <- Vploto + xlab("log(V)") + xlim(c(0.8, 1.75))
   Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
   Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
                              axis.title.y = element_blank()
@@ -163,64 +169,50 @@ if (plot_est) {
     xlab(expression("E"[o])) +
     xlim(c(0, 0.65))
   
-  nplotorder <- plotest(Est.2.plot, n, Order, nmin, nmax)
-  nplotorder <- nplotorder + xlim(c(-0.3, 0.15))
+  nploto <- plotest(Est.2.plot, n, Order, nmin, nmax)
+  nploto <- nploto + xlim(c(-0.175, 0.05)) + theme(axis.text.y = element_blank(), 
+                                                           axis.title.y = element_blank()
+  )
   
-  order_plot <- ggarrange(Aoploto, 
+  order_plot <- ggarrange(Vploto, 
+                          nploto,
                           Eoploto,
                           nrow = 1)
   
   ##Plot Families #####
   Est.2.plot <- dplyr::filter(FamilyEst, NoSpecies >=2)
-  Aoplotf <- plotest(Est.2.plot, logAo, Family, logAomin, logAomax)
-  Aoplotf <- Aoplotf + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
+  Vplotf <- plotest(Est.2.plot, logV, Family, logVmin, logVmax)
+  Vplotf <- Vplotf + xlab("log(V)") + xlim(c(0.8, 1.75))
   Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
   Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
                              axis.title.y = element_blank()
                              )  +
     xlab(expression("E"[o]))+
     xlim(c(0, 0.66))
-  nplotfamily <- plotest(Est.2.plot, n, Family, nmin, nmax)
-  nplotfamily <- nplotfamily + xlim(c(-0.3, 0.15))
-family_plot <-  ggarrange(Aoplotf, 
+  nplotf <- plotest(Est.2.plot, n, Family, nmin, nmax)
+  nplotf <- nplotf + xlim(c(-0.175, 0.05)) + theme(axis.text.y = element_blank(),
+                                                 axis.title.y = element_blank()
+  )  
+family_plot <-  ggarrange(Vplotf, 
+                          nplotf,
                           Eoplotf,
                           nrow = 1)
 
 
-##Plot Genera #####
-Est.2.plot <- dplyr::filter(GeneraEst, NoSpecies >=2)
-Aoplotg <- plotest(Est.2.plot, logAo, Genera, logAomin, logAomax)
-Aoplotg <- Aoplotg + xlab(expression("log(A"[o]~ ")")) + xlim(c(-1.8, -1))
-Eoplotg <- plotest(Est.2.plot, Eo, Genera, Eomin, Eomax)
-Eoplotg <- Eoplotg + theme(axis.text.y = element_blank(),
-                           axis.title.y = element_blank()
-)  +
-  xlab(expression("E"[o]))+
-  xlim(c(0, 0.65))
-nplotgenera <- plotest(Est.2.plot, n, Genera, nmin, nmax)
-nplotgenera <- nplotgenera + xlim(c(-0.3, 0.15))
-genera_plot <-  ggarrange(Aoplotg, 
-                          Eoplotg,
-                          nrow = 1)
+## Multi plot of order 
+ggsave(filename = "figures/order_plot_mle.png",
+       plot = order_plot,
+    units = "px",
+    scale = 3,
+    width = 1029,
+    height = 629)
 
-## Multi plot of order and family
-pdf(file = "figures/ao_and_eo.pdf",
-    width = 11,
-    height = 6)
-plot_grid(order_plot, family_plot,
-          labels = "auto")
-dev.off()
-
-  ## multiplot of n #####
-pdf(file = "figures/n_order_family.pdf",
-    width = 11,
-    height = 6)
-plot_grid(nplotorder, nplotfamily,
-          labels = "auto")
-
-dev.off()
-  
-}
+ggsave(filename = "figures/family_plot_mle.png",
+       plot = family_plot,
+       units = "px",
+       scale = 3,
+       width = 1029,
+       height = 629)
 
 # Compare fits to individual species ####
 ## Add to species the Ao and se ####
@@ -230,8 +222,8 @@ SpeciesEst <- make_species_df(level = 4,
                          ParentChild_gz,
                          groups = taxa.list)
 
-SpeciesEst$Ao = exp(SpeciesEst$logAo)
-SpeciesEst$Aoind <- NA
+SpeciesEst$V = exp(SpeciesEst$logV)
+SpeciesEst$Vind <- NA
 SpeciesEst$Eoind <- NA
 
 
@@ -242,22 +234,22 @@ spc.fits <- readRDS(file = "analysis/ind_species_estimates.RDS")
 for (i in 1:nrow(spc.fits)) {
   spc.2.use <- tolower(spc.fits$Species[i])
   spc.index <- which(tolower(SpeciesEst$Species) == spc.2.use)
-  SpeciesEst$Aoind[spc.index] <- exp(spc.fits$logAo[i])
+  SpeciesEst$Vind[spc.index] <- exp(-spc.fits$logAo[i])
   SpeciesEst$Eoind[spc.index] <- spc.fits$Eo[i]
   }
 ## Make Plot ####
-aoplot <- ggplot(SpeciesEst, aes(x = Aoind, y = Ao)) +
+Vplot <- ggplot(SpeciesEst, aes(x = Vind, y = V)) +
   geom_point(size = 2.5) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.25) +
-  xlab(expression("A"[o]~ "estimated independently")) +
-         ylab(expression("A"[o]~ "estimated hierarchically"))
+  xlab(("V (kPa) estimated independently")) +
+         ylab("V (kPa) estimated hierarchically")
 
 eoplot <- ggplot(SpeciesEst, aes(x = Eoind, y = Eo)) +
   geom_point(size = 2.5) + 
   geom_abline(intercept = 0, slope = 1, linewidth = 1.25) +
   xlab(expression("E"[o]~ "estimated independently")) +
   ylab(expression("E"[o]~ "estimated hierarchically"))
-grid.arrange(aoplot, eoplot, ncol = 2)
+grid.arrange(Vplot, eoplot, ncol = 2)
 
 # save species - level estimates 
 write.csv(x = SpeciesEst, "analysis/species_estimates.csv", row.names = F)
