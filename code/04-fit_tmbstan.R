@@ -21,6 +21,8 @@ n_p <- length(unique(all.dat$SourceNo))
 #### Create new ParentChild matrix for reduced taxonomic structure ####
 kb <-  8.617333262145E-5
 tref <- 15
+wref <- 5
+all.dat$W <- all.dat$W/wref
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit) # fit using pO2 in atm
 taxa.list <- c("Order","Family", "Genera", "Species")
@@ -80,7 +82,7 @@ set.seed(730)
 nchain <- 5
 niter <- 41000
 nwarm <- 1000
-nthin <- 100
+nthin <- 100uu
 rstan_options(auto_write = TRUE)  # this option stops Stan from re-compiling if not necessary
 options(mc.cores = parallel::detectCores())
 sims <- tmbstan(

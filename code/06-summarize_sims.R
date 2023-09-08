@@ -23,34 +23,34 @@ for (i in 1:nrow(order_summary)) {
   sims <- dplyr::filter(sim_beta, Group == taxa.name)
   order.medians <-
     apply(
-      X = cbind(sims$logAo, sims$n, sims$Eo),
+      X = cbind(sims$logV, sims$n, sims$Eo),
       MAR = 2,
       FUN = median
     )
   order.sds <-
     apply(
-      X = cbind(sims$logAo, sims$n, sims$Eo),
+      X = cbind(sims$logV, sims$n, sims$Eo),
       MAR = 2,
       FUN = sd
     )
   order.low <- apply(
-    X = cbind(sims$logAo, sims$n, sims$Eo),
+    X = cbind(sims$logV, sims$n, sims$Eo),
     MAR = 2,
     FUN = quantile,
     probs = 0.05
   )
   order.high <- apply(
-    X = cbind(sims$logAo, sims$n, sims$Eo),
+    X = cbind(sims$logV, sims$n, sims$Eo),
     MAR = 2,
     FUN = quantile,
     probs = 0.95
   )
   tmp_df <- tibble(
     Group = taxa.name,
-    logAo = order.medians[1],
-    logAosd = order.sds[1],
-    logAolow = order.low[1],
-    logAohigh = order.high[1],
+    logV = order.medians[1],
+    logVsd = order.sds[1],
+    logVlow = order.low[1],
+    logVhigh = order.high[1],
     n = order.medians[2],
     nsd = order.sds[2],
     nlow = order.low[2],
@@ -66,7 +66,7 @@ for (i in 1:nrow(order_summary)) {
   taxa_summary[[Count]] <- tmp_df
   Count = Count + 1
   
-  # setup loop of families 
+  # setup loop of families
   family_summary <- all.dat %>%
     filter(Order == order_summary$Order[i]) %>%
     group_by(Family) %>%
@@ -77,24 +77,24 @@ for (i in 1:nrow(order_summary)) {
     sims <- dplyr::filter(sim_beta, Group == family.name)
     family.medians <-
       apply(
-        X = cbind(sims$logAo, sims$n, sims$Eo),
+        X = cbind(sims$logV, sims$n, sims$Eo),
         MAR = 2,
         FUN = median
       )
     family.sds <-
       apply(
-        X = cbind(sims$logAo, sims$n, sims$Eo),
+        X = cbind(sims$logV, sims$n, sims$Eo),
         MAR = 2,
         FUN = sd
       )
     family.low <- apply(
-      X = cbind(sims$logAo, sims$n, sims$Eo),
+      X = cbind(sims$logV, sims$n, sims$Eo),
       MAR = 2,
       FUN = quantile,
       probs = 0.05
     )
     family.high <- apply(
-      X = cbind(sims$logAo, sims$n, sims$Eo),
+      X = cbind(sims$logV, sims$n, sims$Eo),
       MAR = 2,
       FUN = quantile,
       probs = 0.95
@@ -102,10 +102,10 @@ for (i in 1:nrow(order_summary)) {
     
     tmp_df <- tibble(
       Group = family.name,
-      logAo = family.medians[1],
-      logAosd = family.sds[1],
-      logAolow = family.low[1],
-      logAohigh = family.high[1],
+      logV = family.medians[1],
+      logVsd = family.sds[1],
+      logVlow = family.low[1],
+      logVhigh = family.high[1],
       n = family.medians[2],
       nsd = family.sds[2],
       nlow = family.low[2],
@@ -117,22 +117,15 @@ for (i in 1:nrow(order_summary)) {
       Nspecies = dplyr::filter(family_summary, Family == family.name)$NSpecies,
       level = "Family"
     )
-    
     taxa_summary[[Count]] <- tmp_df
     Count = Count + 1
-    
-  }
+}
 }
 
 taxa_table <- do.call("rbind", taxa_summary)  
 
 # save as csv file
 write.csv(x = taxa_table, file = "analysis/taxa_table.csv")
-
-family_sum <- taxa_table %>%
-  filter (level == "Family")
-family_sum$Vhigh = exp(-family_sum$logAolow)
-family_sum$Vlow = exp(-family_sum$logAohigh)
 
 
 

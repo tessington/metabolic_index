@@ -65,16 +65,16 @@ sim_betas <- sim_taxa(obj = obj,
 
  # Plot by order ####
 
-xlims <- c(-2, -0.5)
-ylims <- c(-0.05, 0.85)
+xlims <- c(0.75, 2)
+ylims <- c(-0.25, 0.2)
 vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
 
  groups.2.use <- dplyr::filter(order_summary, NoFamily >=2)$Order
   dorder<-  ggplot(data =dplyr::filter(sim_betas, level == 1, Group %in% groups.2.use),
-                  aes( x = logAo, y = Eo)) + 
+                  aes( x = logV, y = n)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                            show.legend = F) +
-    scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+    scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(.), 
                                                               breaks = vticks)) +
     ylim(ylims) +  
     stat_ellipse(type = "norm",
@@ -82,7 +82,7 @@ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
                 linewidth = 1.5,
                 col = "black") +
    scale_fill_manual(palette = colpal) +
-   labs(x = expression(log(A[o])), y = expression(E[o])) +
+   labs(x = "log(V) (kPa)", y = "n") +
    facet_wrap(vars(Group), nrow = 2, ncol = 3) + 
     theme(axis.line.x.top = element_line(color = "black"),
           axis.ticks.x.top = element_line(color = "black"),
@@ -93,7 +93,7 @@ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
  
  groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
  dfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
-                  aes( x = logAo, y = Eo)) + 
+                  aes( x = logV, y = n)) + 
    geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
                            show.legend = F) +
    ylim(ylims) +  
@@ -101,44 +101,31 @@ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
                 level = 0.8,
                 linewidth = 1.5,
                 col = "black") +
-   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(-.), name="V (kPa)", 
+   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(.), name = "kPa",
                                                                  breaks = vticks)) +
    scale_fill_manual(palette = colpal) +
-   labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 4, ncol = 4) +
+   labs(x ="log(V)", y = "n") +
+   facet_wrap(vars(Group), nrow = 5, ncol = 3) +
    theme(axis.line.x.top = element_line(color = "black"),
          axis.ticks.x.top = element_line(color = "black"),
          axis.text.x.top = element_text(color = "black"))
  dfamily
  
  
- nfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
-                   aes( x = n)) + 
-   geom_density(fill = "#9ecae1") +
+ Eofamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                   aes( x = Eo)) + 
+   geom_density(fill = "#9ecae1", adjust = 1.25) +
    ylab("Density") + 
+   xlab(expression(E[o])) +
    scale_y_continuous(n.breaks = 3) +
-   scale_x_continuous(limits = c(-0.5, 0.5), n.breaks = 4) +
-   facet_wrap(vars(Group), nrow = 4, ncol = 4) 
+   scale_x_continuous(limits = c(-0.1, 1.0), n.breaks = 4) +
+   facet_wrap(vars(Group), nrow = 5, ncol = 3) 
  
  
  dfamily
- nfamily
+ Eofamily
  ## Plot by Genera ####
- groups.2.use <- dplyr::filter(genera_summary, NoSpecies >=2)$Genera
- dgenera<-  ggplot(data =dplyr::filter(sim_betas, level == 3, Group %in% groups.2.use),
-                   aes( x = logAo, y = Eo)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
-                           show.legend = F) +
-   xlim(xlims) + 
-   ylim(ylims) + 
-   stat_ellipse(type = "norm",
-                level = 0.9,
-                linewidth = 1.5,
-                col = "black") +
-   scale_fill_manual(palette = colpal) +
-   labs(x = expression(log(A[o])), y = expression(E[o])) +
-   facet_wrap(vars(Group), nrow = 4, ncol = 4)
- dgenera
+ 
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
  savefiles <- T
@@ -155,11 +142,12 @@ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
           width = 1184*2,
           height = 1184*2,
           units = "px")
-   ggsave(plot = dgenera,
-          filename = "figures/genera_plot.png",
+   ggsave(plot = Eofamily,
+          filename = "figures/Eo_family_plot.png",
           width = 1184*2,
-          height = 745*2,
-          units = "px")
+          height = 1184*2,
+          units = "px"
+          )
  }
    
    

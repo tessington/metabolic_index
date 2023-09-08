@@ -2,28 +2,14 @@
 
 
 #### Get all data ####
-all.dat <- readRDS(file = "data/alldata_taxonomy.RDS")
+all.dat <- load_data()
 # set W to 1 if NA
-all.dat$W[which(is.na(all.dat$W))] <- 1
-#  Add in "spc' when no species is given
-naIndex <- which(is.na(all.dat$Species))
-for (i in 1:length(naIndex)) all.dat$Species[naIndex[i]] <- paste0(all.dat$Genera[naIndex[i]], " spc")
-
-# get median mass for each species
-species.median.mass <- all.dat %>%
-  group_by(Species) %>%
-  summarize(Wmed = median(W, na.rm = T))
-# divide Actual mass by median mass for that species
-for (i in 1:nrow(species.median.mass)) {
-  spc.index <- which(all.dat$Species == species.median.mass$Species[i])
-  all.dat$W[spc.index] <- all.dat$W[spc.index] / species.median.mass$Wmed[i]
-}
-# for species with only 1 mass, replace the NA with 1
-all.dat$W[is.na(all.dat$W)] = 1
 
 
 kb <-  8.617333262145E-5
 tref <- 15
+wref <- 5
+all.dat$W <- all.dat$W / wref
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit) # fit using pO2 in atm
