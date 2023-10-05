@@ -226,7 +226,7 @@ SpeciesEst$V = exp(SpeciesEst$logV)
 SpeciesEst$Vind <- NA
 SpeciesEst$Eoind <- NA
 
-
+}
 ## Load previous fits ####
 spc.fits <- readRDS(file = "analysis/ind_species_estimates.RDS")
 
