@@ -82,7 +82,7 @@ set.seed(730)
 nchain <- 5
 niter <- 41000
 nwarm <- 1000
-nthin <- 100uu
+nthin <- 100
 rstan_options(auto_write = TRUE)  # this option stops Stan from re-compiling if not necessary
 options(mc.cores = parallel::detectCores())
 sims <- tmbstan(
