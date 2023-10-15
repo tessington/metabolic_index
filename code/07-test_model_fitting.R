@@ -144,6 +144,21 @@ Cov_jj <- pars$Cov_jj
 logV_sigma_sum = pars$logV_sigma_sum
 sigma <- pars$sigma
 
+plot.df <- tibble(Level = c("Among Orders",
+                               "Among Families w/in Order",
+                               "Among Genera w/in Families",
+                               "Among Species w/in Genera"),
+                     relVar = c(1, lambda))
+plot.df$Level <- factor(plot.df$Level, levels = rev( c("Among Orders",
+                                             "Among Families w/in Order",
+                                             "Among Genera w/in Families",
+                                             "Among Species w/in Genera")))
+ggplot(plot.df, aes(x = relVar, y = Level )) +
+  geom_col() +
+  xlab("Relative Variance") + 
+  theme(axis.title.y = element_blank()) +
+  scale_x_continuous(limits = c(0, 4), expand = c(0, 0), breaks = c(0, 2, 4))
+
 nsims <- 100
 est_sigma_p <- est_V_sd <- rep(NA, nsims)
 
@@ -248,4 +263,19 @@ est_sigma_p[sim] <- exp(opt$par[grep(names(opt$par), pattern = "logsigma_p")])
 # compare to fit to real data
 real_est <- readRDS(file = "analysis/modelfit.RDS")
 real_pars <- extract_pars(real_est$opt)
+lambda <- (real_pars$lambda)
 real_pars$logV_sigma_sum
+plot.df <- tibble(Level = c("Among Orders",
+                            "Among Families w/in Order",
+                            "Among Genera w/in Families",
+                            "Among Species w/in Genera"),
+                  relVar = c(1, lambda))
+plot.df$Level <- factor(plot.df$Level, levels = rev( c("Among Orders",
+                                                       "Among Families w/in Order",
+                                                       "Among Genera w/in Families",
+                                                       "Among Species w/in Genera")))
+ggplot(plot.df, aes(x = relVar, y = Level )) +
+  geom_col() +
+  xlab("Relative Variance") + 
+  theme(axis.title.y = element_blank()) +
+  scale_x_continuous(limits = c(0, 4), expand = c(0, 0), breaks = c(0, 2, 4))

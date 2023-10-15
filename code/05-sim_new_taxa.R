@@ -9,9 +9,13 @@ library(Matrix)
 library(mvtnorm)
 library(tmbstan)
 library(shinystan)
+library(egg)
+library(cowplot)
+library(KernSmooth)
+library(ggridges)
 
 # ggplot setup ####
-colpal <- colorRampPalette(c("white", "#deebf7", "#9ecae1","#3182bd"))
+
 theme_set(theme_bw(base_size = 14))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
@@ -62,92 +66,198 @@ species_summary <- all.dat %>%
 sim_betas <- sim_taxa(obj = obj,
                       ParentChild_gz = ParentChild_gz
                       )
+sim_betas <- readRDS("analysis/taxa_sims.RDS")
 
- # Plot by order ####
-
-xlims <- c(0.75, 2)
-ylims <- c(-0.25, 0.2)
-vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
-
- groups.2.use <- dplyr::filter(order_summary, NoFamily >=2)$Order
-  dorder<-  ggplot(data =dplyr::filter(sim_betas, level == 1, Group %in% groups.2.use),
-                  aes( x = logV, y = n)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
-                           show.legend = F) +
-    scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(.), 
-                                                              breaks = vticks)) +
-    ylim(ylims) +  
-    stat_ellipse(type = "norm",
-                level = 0.8,
-                linewidth = 1.5,
-                col = "black") +
-   scale_fill_manual(palette = colpal) +
-   labs(x = "log(V) (kPa)", y = "n") +
-   facet_wrap(vars(Group), nrow = 2, ncol = 3) + 
-    theme(axis.line.x.top = element_line(color = "black"),
-          axis.ticks.x.top = element_line(color = "black"),
-          axis.text.x.top = element_text(color = "black"))
- dorder
- 
  # Plot by family ####
- 
+ xlims <- c(0.75, 2)
+ ylims <- c(-0.25, 0.2)
+ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
+### Plot usingdensity ridgeline plot #### 
  groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
- dfamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
-                  aes( x = logV, y = n)) + 
-   geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
-                           show.legend = F) +
-   ylim(ylims) +  
-   stat_ellipse(type = "norm",
-                level = 0.8,
-                linewidth = 1.5,
-                col = "black") +
+ logVfamily <- ggplot(data = dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                      aes(x = logV, y = Group,fill = Group)) +
+   geom_density_ridges() +
    scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(.), name = "kPa",
-                                                                 breaks = vticks)) +
-   scale_fill_manual(palette = colpal) +
-   labs(x ="log(V)", y = "n") +
-   facet_wrap(vars(Group), nrow = 5, ncol = 3) +
-   theme(axis.line.x.top = element_line(color = "black"),
-         axis.ticks.x.top = element_line(color = "black"),
-         axis.text.x.top = element_text(color = "black"))
- dfamily
+                                                             breaks = vticks)) +
+   scale_y_discrete(limits = rev) + 
+   ylab("") +
+   scale_fill_viridis_d() +
+   theme(legend.position = "none")
+ 
+ ylabs<-get_plot_component(logVfamily,pattern = "axis-l", return_all = T)
+ xlims <- c(0.75, 2)
+ groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
+ logVfamily_nolab <- ggplot(data = dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                      aes(x = logV, y = Group,fill = Group)) +
+   geom_density_ridges() +
+   scale_x_continuous(limits = c(xlims), sec.axis = sec_axis(~exp(.), name = "kPa",
+                                                             breaks = vticks)) +
+   scale_y_discrete(limits = rev) + 
+   ylab("") +
+   scale_fill_viridis_d() +
+   theme(legend.position = "none",
+         axis.text.y = element_blank())
  
  
- Eofamily<-  ggplot(data =dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
-                   aes( x = Eo)) + 
-   geom_density(fill = "#9ecae1", adjust = 1.25) +
-   ylab("Density") + 
-   xlab(expression(E[o])) +
-   scale_y_continuous(n.breaks = 3) +
+ xlims <-  c(-0.25, 0.2)
+ nfamily <- ggplot(data = dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                      aes(x = n, y = Group,fill = Group)) +
+   geom_density_ridges() +
+   scale_x_continuous(limits = (xlims)) +
+   scale_y_discrete(limits = rev) +
+   ylab("") +
+   scale_fill_viridis_d() +
+   theme(legend.position = "none",
+         axis.text.y = element_blank())
+ 
+ 
+ Eofamily <- ggplot(data = dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+                      aes(x = Eo, y = Group, fill = Group)) +
+   geom_density_ridges() +
    scale_x_continuous(limits = c(-0.1, 1.0), n.breaks = 4) +
-   facet_wrap(vars(Group), nrow = 5, ncol = 3) 
+   scale_y_discrete(limits = rev) +
+   scale_fill_viridis_d() +
+   ylab("") +
+   theme(legend.position = "none",
+         axis.text.y = element_blank())
  
+ # make a goofy plot that only has y axis labels
+ yaxis <- ggplot( data = dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use),
+ aes(x = 1, y = Group)) +
+   scale_y_discrete(limits = rev) + 
+   scale_x_continuous(limits = c(0,1), sec.axis = sec_axis(~.+1, name = "kPa", breaks = c(1.95,2.05))) +
+  theme(axis.line.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        aspect.ratio = 100)
  
- dfamily
- Eofamily
- ## Plot by Genera ####
+ p_row<- plot_grid(logVfamily_nolab, nfamily, Eofamily,
+           align = "hv", axis = "tblr", nrow = 1)
+ plot_grid(yaxis, p_row, axis = "tblr", rel_widths = c(1,3))
+ 
+ ggsave(file = "figures/unaligned_family.pdf",
+        width = 10,
+        height = 8,
+        units= "in")
+
+ 
+ ### plot using inner 90 quantiles ####
+ 
+ make_bar <- function(i, tmp.data) {
+   b <- quantile(tmp.data, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
+   rect(ybottom = i - .2, 
+        ytop =i + 0.2,
+        xleft = b[2],
+        xright = b[4],
+        lwd = 2,
+        col = "gray"
+   )
+   arrows(y0 = i,
+          y1 = i,
+          x0 = b[2],
+          x1 = b[1],
+          angle = 90,
+          length = 0.075,
+          lwd = 2)
+   
+   arrows(y0 = i,
+          y1 = i,
+          x0 = b[4],
+          x1 = b[5],
+          angle = 90, 
+          length = 0.075,
+          lwd = 2)
+   lines(x = rep(b[3],2),
+         y = c(i-0.2, i + 0.2 ),
+         lwd = 2)
+   
+ }
+ # set layout
+ # relative size of log(v) plot to others
+ pdf(file= "figures/trait_by_family.pdf",
+     height = 6,
+     width = 8)
+ ngroups <- length(groups.2.use)
+ groups.2.use <- rev(groups.2.use)
+ 
+ rel.size <- 1.6
+ # set size of axis tick labels
+ cex.mult <- 1.4
+ # make layout matrix so that first plot has relsize
+ #
+ layout(mat = matrix(c(1,2,3), nrow = 1), width = c(rel.size, 1,1))
+ 
+ # Make Empty plot for logV
+ xlims <- c(0.69, 2)
+ ylims <- c(-0.25, 0.2)
+ vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
+ par(mar = c(5,12,5,1))
+ # blank plot for logV
+ plot(0, type = "n",
+      axes = F,
+      xlab = "log(V)",
+      ylab= "",
+      xlim = xlims,
+      ylim = c(0.5, ngroups + 0.5),
+      xaxs = "i",
+      yaxs = "i",
+      cex.lab = 1.75)
+ axis(side = 1, at = seq(0.8, 2.0, by = 0.4), cex.axis = cex.mult)
+ axis(side = 2, at = 1:ngroups, labels = groups.2.use, las = 1, cex.axis= cex.mult)
+ axis(side = 3, at = log(vticks), labels = vticks, line, cex.axis = cex.mult)
+ box()
+ mtext(side = 3, "kPa", line = 2, cex = 1.25)
+ 
+ for (i in 1:length(groups.2.use)) {
+   tmp.data <-  dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use[i])
+   make_bar(i, tmp.data$logV)
+ }
+
+ # blank plot for n
+ par(mar = c(5,1,5,1))
+ plot(0, type = "n",
+      axes = F,
+      xlab = "n",
+      ylab= "",
+      xlim = c(-0.3, 0.21),
+      ylim = c(0.5, ngroups + 0.5),
+      xaxs = "i",
+      yaxs = "i",
+      cex.lab = 1.75)
+ axis(side = 1, at = seq(-0.2, 0.2, by = 0.2), cex.axis = cex.mult)
+ axis(side = 2, at = 1:ngroups, labels = F)
+ box()
+ for (i in 1:length(groups.2.use)) {
+   tmp.data <-  dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use[i])
+   make_bar(i, tmp.data$n)
+ }
+ 
+ # blank plot for Eo
+ par(mar = c(5,1,5,1))
+ plot(0, type = "n",
+      axes = F,
+      xlab = expression(E[o]),
+      ylab= "",
+      xlim = c(-0.1, 0.9),
+      ylim = c(0.5, ngroups + 0.5),
+      xaxs = "i",
+      yaxs = "i",
+      cex.lab = 1.75)
+ axis(side = 1, at = seq(-0.0, 0.8, by = 0.4),cex.axis = cex.mult)
+ axis(side = 2, at = 1:ngroups, labels = F)
+ box()
+ for (i in 1:length(groups.2.use)) {
+   tmp.data <-  dplyr::filter(sim_betas, level == 2, Group %in% groups.2.use[i])
+   make_bar(i, tmp.data$Eo)
+ }
+ 
+ dev.off()
  
  saveRDS(sim_betas, "analysis/taxa_sims.RDS")
  
- savefiles <- T
- if (savefiles) {
  
-   ggsave(plot = dorder,
-          filename = "figures/order_plot.png",
-          width = 1184*2,
-          height = 745*2,
-          units = "px")
-   
-   ggsave(plot = dfamily,
-          filename = "figures/family_plot.png",
-          width = 1184*2,
-          height = 1184*2,
-          units = "px")
-   ggsave(plot = Eofamily,
-          filename = "figures/Eo_family_plot.png",
-          width = 1184*2,
-          height = 1184*2,
-          units = "px"
-          )
- }
-   
    

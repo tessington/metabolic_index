@@ -6,78 +6,97 @@ library(tmbstan)
 library(knitr)
 library(egg)
 library(cowplot)
+library(KernSmooth)
 
 source("code/fit_model_funs.R")
 theme_set(theme_bw(base_size = 16))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
              strip.background = element_blank())
+make_poly <- function(simdata) {
+  smoothed <- bkde(simdata)
+  polygon(x = c(smoothed$x, rev(smoothed$x)),
+          y= c(rep(0, length(smoothed$x)), rev(smoothed$y)),
+          col = "gray50")
+  b <- quantile(simdata, probs = c(0.05, 0.95))
+  lower.index <- which(smoothed$x <= b[1])
+  lowersmoothed <- list(x = smoothed$x[lower.index],
+                        y = smoothed$y[lower.index])
+  polygon(x = c(lowersmoothed$x, rev(lowersmoothed$x)),
+          y= c(rep(0, length(lowersmoothed$x)), rev(lowersmoothed$y)),
+          col = "gray90",
+          border = NA)
+  upper.index <- which(smoothed$x >= b[2])
+  uppersmoothed <- list(x = smoothed$x[upper.index],
+                        y = smoothed$y[upper.index])
+  polygon(x = c(uppersmoothed$x, rev(uppersmoothed$x)),
+          y= c(rep(0, length(uppersmoothed$x)), rev(uppersmoothed$y)),
+          col = "gray90",
+          border = NA)
+}
 
 make_plot<- function(sims) {
-  xlim <- c(0.5, 2.5)
-  ylim <- c(-0.35, 0.2)
-  vticks <- c(2, 3, 4, 5, 6, 7, 9, 11, 13)
-  colpal <- colorRampPalette(c("white", "#deebf7", "#9ecae1","#3182bd"))
+  # set size of axis tick labels
+  rel.size = 1.2
+  cex.mult <- 1.75
+  # make layout matrix so that first plot has relsize
+  #
+  allplot <- layout(mat = matrix(c(1,2,3), nrow = 3), height = c(rel.size, 1,1))
   
-  p2d <-  ggplot(data =sims,
-                 aes( x = logV, y = n)) + 
-    geom_density_2d_filled( stat = "density_2d_filled", h = NULL,
-                            show.legend = F) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(.), name="V (kPa)", 
-                                                          breaks = vticks)) +
-    ylim(ylim) + 
-    stat_ellipse(type = "norm",
-                 level = 0.8,
-                 linewidth = 1.5,
-                 col = "black") +
-    geom_point(size = 0.5, alpha = 0.25) + 
-    scale_fill_manual(palette = colpal) +
-    labs(x = "log(V)", y = "n") + 
-    theme(axis.line.x.top = element_blank(),
-          axis.ticks.x.top = element_line(color = "black"),
-          axis.text.x.top = element_blank(),
-          axis.title.x.top = element_blank())
-    
+  # Make Empty plot for logV
+  xlims <- c(0.69, 2)
+  ylims <- c(-0.25, 0.2)
+  vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
+  par(mar = c(5,5,4,1))
+  # blank plot for logV
+  plot(0, type = "n",
+       axes = F,
+       xlab = "log(V)",
+       ylab= "",
+       ylim = c(0,2),
+       xlim = xlims,
+       xaxs = "i",
+       yaxs = "i",
+       cex.lab = 1.75)
+  axis(side = 1, at = seq(0.8, 2.0, by = 0.4), cex.axis = cex.mult)
+  axis(side = 2, cex.axis= cex.mult, las = 1)
+  axis(side = 3, at = log(vticks), labels = vticks, line, cex.axis = cex.mult)
+  box()
+  mtext(side = 3, "kPa", line = 2, cex = 1.25)
+  make_poly(simdata = sims$logV)
+  par(mar = c(5,5,1,1))
+ # make blank plot for n
+  plot(0, type = "n",
+       axes = F,
+       xlab = "n",
+       ylab= "",
+       ylim = c(0,6),
+       xlim = c(-0.3, 0.2),
+       xaxs = "i",
+       yaxs = "i",
+       cex.lab = 1.75)
+  axis(side = 1, at = seq(-0.2, 0.2, by = 0.2), cex.axis = cex.mult)
+  axis(side = 2, cex.axis= cex.mult, las = 1)
+  box()
+  make_poly(simdata = sims$n)
+  mtext(side = 2, text = "Density", line = 3, cex = 2) 
   
-  pV <- ggplot(data =sims,
-                 aes( x =logV)) + 
-    geom_density(fill = "#9ecae1") +
-    ylab("Density") + 
-    scale_y_continuous(n.breaks = 3) +
-    scale_x_continuous(limits = xlim, sec.axis = sec_axis(~exp(.), name="V (kPa)", 
-                                                               breaks = vticks)) +
-    
-    theme(axis.line.x.top = element_blank(),
-          axis.ticks.x.top = element_line(color = "black"),
-          axis.text.x.top = element_text(color = "black"),
-          axis.text.x.bottom = element_blank(),
-          axis.title.x.bottom = element_blank())
   
+  # blank plot for Eo
+  plot(0, type = "n",
+       axes = F,
+       xlab = expression(E[o]),
+       ylab= "",
+       ylim = c(0,2),
+       xlim = c(-0.2, 1),
+       xaxs = "i",
+       yaxs = "i",
+       cex.lab = 1.75)
+  axis(side = 1, at = seq(0, 1, by = 0.25), cex.axis = cex.mult)
+  axis(side = 2, cex.axis= cex.mult, las = 1)
+  box()
+  make_poly(simdata = sims$Eo)
   
-  pn <- ggplot(data =sims,
-                 aes( x =n)) + 
-    geom_density(fill = "#9ecae1") +
-    xlim(ylim) +
-    ylab("Density") +
-    theme(axis.text.y = element_blank(),
-          axis.title.y = element_blank()) +
-    coord_flip()
-  
-  pEo <- ggplot(data =sims,
-                 aes( x =Eo)) + 
-    geom_density(fill = "#9ecae1", adjust = 1.2) +
-    ylab("Density") + 
-    xlab(expression(E[o])) +
-    scale_y_continuous(n.breaks = 3) +
-    scale_x_continuous(limits = c(-0.2, 0.9))
-  
-  pblank <- ggplot() + geom_blank() + theme_void()
-  vn <- ggarrange(pV, pblank,p2d, pn,
-            widths = c(4,1),
-            heights = c(1,4)
-            )
-  allplot <- plot_grid(vn, pEo, labels = "auto", nrow = 2, rel_heights = c(5,2))
-  return(allplot)
 }
 
 
@@ -116,7 +135,7 @@ lookup_taxa <- function(taxa.name) {
     colnames(cov_jj) <- rownames(cov_jj) <- c("log V", "n", "Eo")
     cat("Covariance Matrix \n")
     print(knitr::kable(cov_jj))
-    allplot <- make_plot(sims)
+    make_plot(sims)
     options(warn = 0)
   }
   if(!lookup.taxa) {
@@ -149,7 +168,7 @@ lookup_taxa <- function(taxa.name) {
     colnames(cov_jj) <- rownames(cov_jj) <- c("log V", "n", "Eo")
     cat("Covariance Matrix \n")
     print(knitr::kable(cov_jj))
-    allplot <- make_plot(sims)
+    make_plot(sims)
   
     options(warn = 0)
   
@@ -180,7 +199,6 @@ lookup_taxa <- function(taxa.name) {
              round(nint, 3)[2],
              ")"
   ))
-  return(allplot)
   
 }
 
