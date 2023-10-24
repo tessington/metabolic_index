@@ -146,15 +146,15 @@ sim_betas <- readRDS("analysis/taxa_sims.RDS")
 
  
  ### plot using inner 90 quantiles ####
- 
+ groups.2.use <- dplyr::filter(family_summary, NoSpecies >=2)$Family
  make_bar <- function(i, tmp.data) {
    b <- quantile(tmp.data, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))
    rect(ybottom = i - .2, 
         ytop =i + 0.2,
         xleft = b[2],
         xright = b[4],
-        lwd = 2,
-        col = "gray"
+        lwd = 1.5,
+        col = "lightblue"
    )
    arrows(y0 = i,
           y1 = i,
@@ -162,7 +162,7 @@ sim_betas <- readRDS("analysis/taxa_sims.RDS")
           x1 = b[1],
           angle = 90,
           length = 0.075,
-          lwd = 2)
+          lwd = 1.5)
    
    arrows(y0 = i,
           y1 = i,
@@ -170,10 +170,10 @@ sim_betas <- readRDS("analysis/taxa_sims.RDS")
           x1 = b[5],
           angle = 90, 
           length = 0.075,
-          lwd = 2)
+          lwd = 1.5)
    lines(x = rep(b[3],2),
          y = c(i-0.2, i + 0.2 ),
-         lwd = 2)
+         lwd = 1.5)
    
  }
  # set layout

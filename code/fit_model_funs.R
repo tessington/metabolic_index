@@ -48,7 +48,7 @@ plotest <- function(dataest, trait, groupname, xmin, xmax) {
   
   
   groupplot <- ggplot(data = dataest, aes(x = !!trait, y = !!groupname)) +
-    geom_point() + 
+    geom_point(size = 2) + 
     scale_y_discrete(limits = rev) +
     geom_errorbar(aes(y = !!groupname,
                       xmin = !!xmin,
