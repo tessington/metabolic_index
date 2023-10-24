@@ -14,6 +14,7 @@ library(httr)
 #Fill in the AphiaID you need
 
 unique.taxa <- unique(all.dat$scientific.name)
+all.dat$Phylum <- NA
 all.dat$Class <- NA
 all.dat$Subclass <- NA
 all.dat$Superorder <- NA
@@ -42,6 +43,7 @@ for (i in 1:length(unique.taxa)) {
   url <- sprintf("https://www.marinespecies.org/rest/AphiaClassificationByAphiaID/%d", aphiaID);
   #Get the actual data from the URL
   classificationTree <- fromJSON(url)
+  all.dat$Phylum[taxa.index] <- lookup.taxa(classificationTree, "Phylum")
   all.dat$Class[taxa.index] <- lookup.taxa(classificationTree, "Class")
   all.dat$Subclass[taxa.index] <- lookup.taxa(classificationTree, "Subclass")
   all.dat$Superorder[taxa.index] <- lookup.taxa(classificationTree, "Superorder")
@@ -56,7 +58,7 @@ for (i in 1:length(unique.taxa)) {
 }
 nrow(all.dat)
 # Add uncertain order for Capitellidae
-all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellida"
+all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellidae"
 
 saveRDS(all.dat, file = "data/alldata_taxonomy.RDS")
 all.dat2 <- readRDS(file = "data/alldata_taxonomy.RDS")
