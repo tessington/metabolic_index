@@ -44,13 +44,12 @@ make_plot<- function(sims) {
   # make layout matrix so that first plot has relsize
   #
   allplot <- layout(mat = matrix(c(1,2,3), nrow = 3), height = c(rel.size, 1,1))
-  
-  # Make Empty plot for logV
+
   xlims <- c(0.69, 2)
   ylims <- c(-0.25, 0.2)
   vticks <- c(1, 2, 3, 4, 5, 6, 7, 8)
-  par(mar = c(5,5,4,1))
-  # blank plot for logV
+  par(mar = c(5,5,2.5,2), omi = c(0.5,0.5, 0.5, 0.5))
+  # blank plot for logV to determine axis limits
   plot(0, type = "n",
        axes = F,
        xlab = "log(V)",
@@ -66,7 +65,7 @@ make_plot<- function(sims) {
   box()
   mtext(side = 3, "kPa", line = 2, cex = 1.25)
   make_poly(simdata = sims$logV)
-  par(mar = c(5,5,1,1))
+  
  # make blank plot for n
   plot(0, type = "n",
        axes = F,

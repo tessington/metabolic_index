@@ -144,7 +144,7 @@ diplodus puntazzo,24.75,255.66,8.89423117,127052,species,Cerezo and Garcia 2004
 diplodus puntazzo,27.25,14.95,6.3938534,127052,species,Cerezo and Garcia 2004
 diplodus puntazzo,14.95,509.11,5.12566857,127052,species,Cerezo and Garcia 2004
 doryteuthis pealeii,10,300,3.767,410354,species,Birk unpublished
-doryteuthis pealeii,15,300,4.714,410354,species,Birk unpublished
+doryteuthis (Amerigo) pealeii,15,300,4.714,410354,species,Birk unpublished
 dosidicus gigas,10,4500,1.6,342291,species,Trueblood & Seibel 2013
 dosidicus gigas,20,4500,3.8,342291,species,Trueblood & Seibel 2013
 funchalia villosa,7,2.08,3,107100,species,Donnely & Torres 1988 MarBiol 97:483-494
@@ -282,8 +282,8 @@ oncorhynchus mykiss,15,561,2.933084,127185,species,Ott et al 1980
 oncorhynchus mykiss,20,542,3.6530228,127185,species,Ott et al 1980
 ophioderma cinereum,29,5,6.261902823,245142,species,Lucey et al. 2023
 ophioderma cinereum,32,5,7.859765371,245142,species,Lucey et al. 2023
-ophiomastix wendtii ,29,10,6.364556968,1307747,species,Lucey et al. 2023
-ophiomastix wendtii ,32,10,4.737392826,1307747,species,Lucey et al. 2023
+ophiomastix wendtii,29,10,6.364556968,1307747,species,Lucey et al. 2023
+ophiomastix wendtii,32,10,4.737392826,1307747,species,Lucey et al. 2023
 oplophorus gracilirostris,5,2.58,4.666666667,212900,species,Donnely & Torres 1988 MarBiol 97:483-494
 oplophorus gracilirostris,10,2.58,5.4,212900,species,Donnely & Torres 1988 MarBiol 97:483-494
 oplophorus gracilirostris,20,2.58,6.36,212900,species,Donnely & Torres 1988 MarBiol 97:483-494
@@ -299,9 +299,9 @@ palaemon pugio,25,NA,4.34,932401,species,Gardiner et al 20210
 palaemon vulgaris,18,NA,2.45,932406,species,Miller et al. 2002
 palaemon vulgaris,24,NA,2.67,932406,species,Miller et al. 2002
 palaemon vulgaris,25,NA,5.69,932406,species,Miller et al. 2002
-panaluris interruptus,10,6.14,3.48370386,382898,species,Winget 1969 BioBuill 136 301 - 312
-panaluris interruptus,20,5.84,3.19439512,382898,species,Winget 1969 BioBuill 136 301 - 312
-panaluris interruptus,30,5.79,2.73576744,382898,species,Winget 1969 BioBuill 136 301 - 312
+panulirus interruptus,10,6.14,3.48370386,382898,species,Winget 1969 BioBuill 136 301 - 312
+panulirus interruptus,20,5.84,3.19439512,382898,species,Winget 1969 BioBuill 136 301 - 312
+panulirus interruptus,30,5.79,2.73576744,382898,species,Winget 1969 BioBuill 136 301 - 312
 pandalus borealis,5,3.3,1.905453,107649,species,Schmid 1996 BPF 202 1 - 92
 pandalus borealis,8,3.3,2.9216946,107649,species,Schmid 1996 BPF 202 1 - 92
 pandalus borealis,5,11.31,3.2816135,107649,species,Schmid 1996 BPF 202 1 - 92
@@ -396,3 +396,13 @@ zoarces viviparus,14.55,47.43,5.139735018,127123,species,Portner & Knust 2008
 zoarces viviparus,15.45,47.43,5.697143091,127123,species,Portner & Knust 2008
 zoarces viviparus,16.95,47.43,7.186198053,127123,species,Portner & Knust 2008
 zoarces viviparus,18.35,47.43,8.735834983,127123,species,Portner & Knust 2008
+micropogonias undulatus,10,306,5.77,151158,species,Marcek et al 2019
+micropogonias undulatus,15,254,5.13,151158,species,Marcek et al 2019
+micropogonias undulatus,20,218,3.68,151158,species,Marcek et al 2019
+micropogonias undulatus,25,221,5.6,151158,species,Marcek et al 2019
+micropogonias undulatus,30,254,6.13,151158,species,Marcek et al 2019
+leiostomus xanthurus,10,142.6,5.77,159322,species,Marcek et al 2019
+leiostomus xanthurus,15,208,4.87,159322,species,Marcek et al 2019
+leiostomus xanthurus,20,214,4.82,159322,species,Marcek et al 2019
+leiostomus xanthurus,25,209,5.6,159322,species,Marcek et al 2019
+leiostomus xanthurus,30,206,6.13,159322,species,Marcek et al 2019

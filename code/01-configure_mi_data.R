@@ -1,5 +1,5 @@
 library(tidyr)
-
+library(dplyr)
 
 rm(list = ls())
 # save to CSV file  
@@ -61,21 +61,32 @@ nrow(all.dat)
 all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellidae"
 
 saveRDS(all.dat, file = "data/alldata_taxonomy.RDS")
-all.dat2 <- readRDS(file = "data/alldata_taxonomy.RDS")
-nrow(all.dat2)
 
 
 # Get summary statistics ####
-sum_by_species <- all.dat2 %>%
+sum_by_species <- all.dat %>%
   filter(lowest.taxon == "species") %>%
   group_by(Species) %>%
   summarise(nstudy = length(unique(Source))) %>%
   group_by(nstudy) %>%
   summarise(nspecies = n())
 
-sum_by_study <- all.dat2 %>%
+sum_by_study <- all.dat %>%
   filter(lowest.taxon == "species") %>%
   group_by(Source) %>%
   summarise(nspc = length(unique(Species))) %>%
   group_by(nspc) %>%
   summarise(nstudies = n())
+
+sum_by_temp_w <- all.dat %>%
+  filter(lowest.taxon == 'species') %>%
+  group_by(Species) %>%
+  summarise(ntemp = length(unique(Temp)), nw = length(unique(W)))
+
+hist_temp <- ggplot(sum_by_temp_w, aes(x = ntemp)) + 
+  geom_histogram(bins = 30)
+print(hist_temp)
+
+hist_w <- ggplot(sum_by_temp_w, aes(x = nw)) + 
+  geom_histogram()
+print(hist_w)

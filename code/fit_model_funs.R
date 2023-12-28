@@ -263,3 +263,30 @@ sim_taxa <- function(obj, ParentChild_gz) {
   return(sim_betas)
 }
 
+# Function to extract predictions
+  
+  lookup_taxa <- function(taxa.name) {
+    all.dat <- load_data()
+    sim_beta <- readRDS("analysis/taxa_sims.RDS")
+    ltaxa.name <- tolower(taxa.name)
+    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
+    sim_beta$Group <- tolower(sim_beta$Group)
+    if(lookup.taxa) {
+      options(warn = -1)
+      sims <- dplyr::filter(sim_beta, Group == ltaxa.name)
+    }
+    if(!lookup.taxa) {
+      options(warn = -1)
+      cat("Taxonomic group not in sample, showing distribution for unknown Class \n")
+      cat("Run print.order(),  print.family() or print.genera() to see list \n of taxonomic groups")
+      options(warn = -1)
+      sims <- dplyr::filter(sim_beta, is.na(Group))
+    }
+    
+    # retrieve posterior medians
+    logV.taxa <- sims$logV
+    n.taxa <- sims$n
+    eo.taxa <- sims$Eo
+    return_obj <- list(logV = logV.taxa, n = n.taxa, Eo = eo.taxa)
+    return(return_obj)
+  }
