@@ -39,7 +39,7 @@ ggplot(beta_p, aes(x = Estimate, weight = Std..Error)) +
   geom_histogram(bins = 20)
 
 # make a dataframe of study names and estimated effect sizes
-studydf <- data.frame(Source = unique(all.dat$Source),
+studydf <- data.frame(Source = levels(as.factor(all.dat$Source)),
                       effect_size = beta_p$Estimate,
                       effect_SE = beta_p$Std..Error)
 
@@ -53,8 +53,10 @@ View(studydf)
 # Plot Species fits with source effects ####
 # lookup fits in hierarchical model
 species.2.use <- c("Menidia menidia", "Oplophorus gracilirostris")
+study.2.use <- c("Hoff 1967", "Cowles et al 1991 MarBiol 110:75:83")
 
 ### Make blank plot ####
+par(mar = c(5,5,1,1))
 plot(0, 0,
      type = "n",
      ylab = expression(log(pO[2]~W^n)),
@@ -63,15 +65,18 @@ plot(0, 0,
      ylim = c(0.0, 2),
      xlim = c(-2, 2),
      xaxs = "i",
-     yaxs = "i"
+     yaxs = "i",
+     cex.axis = 1.5,
+     cex.lab = 1.5
 )
+
 
 cols <- c("darkred", "darkblue")
 for (i in 1:length(species.2.use)) {
   
   ## Lookup species estimates ####
   spc.index <- which(SpeciesEst$Species==species.2.use[i])
- 
+  study.index <- which(studydf$Source==study.2.use[i])
   
   Vind <- SpeciesEst$Vind[spc.index]
   Eoind <- SpeciesEst$Eoind[spc.index]
@@ -106,4 +111,9 @@ for (i in 1:length(species.2.use)) {
   lines(inv.t.line, logpcrit_hat,
         lwd = 2,
         col = cols[i])
+  arrows(x0 = 0,
+         x1 = 0,
+         y0 = log(Vind),
+         y1 = log(Vind) + beta_p_source,
+         lwd = 2)
 }

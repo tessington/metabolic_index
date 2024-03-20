@@ -260,6 +260,10 @@ est_V_sd[sim] <- est_pars$logV_sigma_sum
 est_sigma_p[sim] <- exp(opt$par[grep(names(opt$par), pattern = "logsigma_p")])
 }
 
+hist(est_sigma_p, xlab = expression(sigma[p]),las = 1, main = "",
+     cex.lab = 1.5,cex.axis = 1.5)
+box()
+
 # compare to fit to real data
 real_est <- readRDS(file = "analysis/modelfit.RDS")
 real_pars <- extract_pars(real_est$opt)
