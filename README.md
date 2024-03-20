@@ -1,9 +1,12 @@
-# metabolic_index
-Code for running phylogenetic trait analysis on metabolic index parameters.
+# Remarkable similarity of oxygen tolerance across marine taxa when standardized for temperature and body size
+# Summary of the study
+We used phylogenetic imputation on experimental data on taxonomically diverse marine taxa that related critical oxygen pressure (pO2crit) to temperature and body size.  We found that once we accounted for differences in body size, temperatures, and the source paper, the data point to very similar oxygen partial pressures (generally between 3 - 5 kPa) at which oxygen demand exceeds supply.  
 
-To extract simulations for a taxa, go to the lookup_taxa sub directory and open file "lookup_taxa.R".  There you can specify the taxonomic group, and source the file to see simulation medians, standard deviations, and variance - covariance matrix of metabolic index tratis
-
+# Code version 
+v.1.0
+# Overview of folders/files and their contents
 All working R files are in subdirectory "code"
+
 - 01-configure-mi-data.R.  Adds the taxonomic information by accessing the World Register of Marine Species.  Does not need to be run, as results have been generated and saved in /data/alldata_taxonomy.RDS
 - 02-fit-individual-species.R. Runs linear models individually for each species.  Does not need to be run, as results have been generated and saved in analysis/species_estimates.RDS
 - 03-fit_TMB_model.R.  Runs Hierarchical model using TMB, and plots results for taxonomic groups. Also includes summary of data coverage by taxonomic group.
@@ -13,3 +16,15 @@ All working R files are in subdirectory "code"
 - fit_model_funs.R.  Contains numerous functions that are called in the above source files.  It is called within those source files.
 
 Files in subdirectory "analysis" are saved products as described above.  It also includes modelfit.RDS, which is a saved TMB fitted  model, and modelfit_stan.RDS, which is another saved TMB model where the model code is modified to permit successful MCMC integration.
+
+All raw data are provided in subdirectory "data"
+
+#Instructions for users to run the software (e.g. explain the project workflow and any configuration parameters of your software)
+See workflow instructions above.  To extract simulations for a taxa, go to the lookup_taxa sub directory and open file "lookup_taxa.R".  There you can specify the taxonomic group, and source the file to see simulation medians, standard deviations, and variance - covariance matrix of metabolic index tratis
+
+
+# Links to protocols.io or equivalent methods repositories, where applicable
+NA
+
+
+
