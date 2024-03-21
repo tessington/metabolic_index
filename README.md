@@ -17,9 +17,16 @@ All working R files are in subdirectory "code"
 
 Files in subdirectory "analysis" are saved products as described above.  It also includes modelfit.RDS, which is a saved TMB fitted  model, and modelfit_stan.RDS, which is another saved TMB model where the model code is modified to permit successful MCMC integration.
 
-All raw data are provided in subdirectory "data"
+All raw data are provided in subdirectory "data".  The primary file is allmidata_csv.  The fields are:
+scientific.name: Genus species, updated January 2023; https://www.marinespecies.org/index.php
+Temp: experimental temperature (degrees C)
+W: individual (or mean individual) body size (grams)
+Pcrit: estimated critical oxygen partial pressure (kPa)
+AphiaID: Aphia ID for species, genus, family, or order: https://www.marinespecies.org/index.php
+lowest.taxon: lowest taxonomic level for taxonomic group.  Usually equals "species"
+Source: Short verson of paper citation or data source
 
-#Instructions for users to run the software (e.g. explain the project workflow and any configuration parameters of your software)
+# Instructions for users to run the software (e.g. explain the project workflow and any configuration parameters of your software)
 See workflow instructions above.  To extract simulations for a taxa, go to the lookup_taxa sub directory and open file "lookup_taxa.R".  There you can specify the taxonomic group, and source the file to see simulation medians, standard deviations, and variance - covariance matrix of metabolic index tratis
 
 
