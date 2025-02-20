@@ -2,7 +2,6 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(gsw)
-library(wesanderson)
 
 # Load O2 Data
 dat <- as.data.frame(readRDS("data/all_o2_dat_filtered.rds"))
@@ -68,16 +67,31 @@ ggplot(data = dat, aes(x = temp, y=po2, colour=region)) +
   scale_color_manual(values = c("#9970AB", "#ACD39E", "#FFEE99"), labels=labs, name="Region")+
    guides(colour = guide_legend(override.aes = list(size=6, alpha=1)))
 
-#ggsave(filename = "temp_o2_single_plot.png",
-#       plot = last_plot(),
-#       width = 7,
-#       height = 6,
-#      units = "in")
 
+# Pick a taxonomic group to simulate pcrit based on each temperature
 
-# Pick a taxonmic group to simulate pcrit based on each temperature
+taxa.2.use <-  "Myctophidae"
+W <- 2
 
-family = "Myctophidae"
+t.range <- seq(min(dat$temp), max(dat$temp), length.out = 100)
+
+pcrit_df <- lookup_taxa_t(taxa.2.use, t.range = t.range, w.2.use = W)
+# quick plot check
+ggplot(pcrit_df, aes(x = Temp, y = lower50s)) +
+  geom_line()
+
+# Fit smoother to lower and upper bounds
+
+# make an x_y positions df based on inner 50% range
+positions50 <- data.frame(
+  temp = c(pcrit_df$Temp, rev(pcrit_df$Temp)),
+  ys = c(pcrit_df$lower50s, rev(pcrit_df$upper50s))
+)
+
+positions90 <- data.frame(
+  temp = c(pcrit_df$Temp, rev(pcrit_df$Temp)),
+  ys = c(pcrit_df$lower90s, rev(pcrit_df$upper90s))
+)
 
 
 #Separate
@@ -88,9 +102,13 @@ ggplot(data = dat, aes(x = temp, y=po2)) +
   ylab(bquote(pO[2]~"(kPa)")) +
   scale_x_continuous(expand = c(0,0), limits = c(0, 15) ) +
   scale_y_continuous(expand = c(0,0), limits = c(0,30) )+
-  theme(panel.spacing = unit(2, "lines"))
+  theme(panel.spacing = unit(2, "lines")) +
+  geom_polygon(data = positions50, aes(x = temp, y = ys), fill = "grey1", color = NA, alpha = 0.5) + 
+  geom_polygon(data = positions90, aes(x = temp, y = ys), fill = "lightgrey", color = NA, alpha = 0.5) 
+  
 
-ggsave(filename = "temp_o2_multi_plot.png",
+
+ggsave(filename = "figures/temp_o2_multi_plot.png",
        plot = last_plot(),
        width = 7,
        height = 3,
