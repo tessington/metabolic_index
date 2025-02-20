@@ -20,16 +20,27 @@ theme_update(panel.grid.major = element_blank(),
              axis.text = element_text(color = "black")
              )
 
+# get MLE estimate for betamethod
+mle <- readRDS("analysis/modelfit.RDS")
+fixef <- summary(mle$rep, "fixed")
+beta_method_mle <- fixef[grep(x = rownames(fixef), pattern = "beta_method"),]
+
 # load functions ####
 source("code/fit_model_funs.R")
 
-# Generate Evolutionary Trait Structure ####
-
 # Get data with  taxonomy tree ####
 all.dat <- load_data()
-all.dat$Source <- factor(all.dat$Source)
-all.dat$SourceNo <- as.numeric(all.dat$Source)
-n_p <- length(unique(all.dat$SourceNo))
+
+rem_styela <- T
+if (rem_styela) all.dat <- all.dat %>%
+  filter(Species != "Styela plicata")
+
+rem_unknown <- T
+all.dat$EstMethod_Metric <- tolower(all.dat$EstMethod_Metric)
+if (rem_unknown) all.dat <- dplyr::filter(all.dat, !Method == "unknown", !EstMethod_Metric == "unknown")
+
+# Keep only oxygen consumption methods
+all.dat <- dplyr::filter(all.dat, Method == "OxygenConsumption")
 
 
 # Setup TMB data and parameters ####
@@ -40,7 +51,7 @@ wref <- 5
 all.dat$W <- all.dat$W/wref
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
-taxa.list <- c("Order", "Family", "Genera", "Species")
+taxa.list <- c("Class", "Order", "Family", "Genera", "Species")
 
 ## Create new ParentChild matrix for reduced taxonomic structure ####
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
@@ -53,7 +64,7 @@ n_j <- taxa.info$n_j
 n_g <- taxa.info$n_g
 n_i <- taxa.info$n_i
 spc_in_PC_gz <- taxa.info$spc_in_PC_gz
-
+method_mat <- model.matrix(~ EstMethod_Metric , all.dat)
 
 ## Setup TMB ####
 data <- list(PC_gz = PC_gz,
@@ -73,7 +84,7 @@ parameters = list(alpha_j = rep(0,n_j),
                   logsigma = 0
 )
 Random <- c("beta_gj")
-model <- "hierarchical_mi_no_paper"
+model <- "hierarchical_mi_no_method"
 compile(paste0("code/TMB/", model, ".cpp"))
 dyn.load(dynlib(paste0("code/TMB/",model)))
 
@@ -94,7 +105,7 @@ rep = sdreport( obj,
 beta_gj_real <- matrix(rep$par.random, nrow = n_g, ncol = n_j)
 
 # get species beta_gj
-species_beta_gj <- beta_gj_real[ which(ParentChild_gz[,4] == 4),]
+species_beta_gj <- beta_gj_real[ which(ParentChild_gz[,4] == 5),]
 sd_beta_gj <- apply(X = species_beta_gj, FUN = sd, MAR = 2)
 
 
@@ -144,23 +155,8 @@ Cov_jj <- pars$Cov_jj
 logV_sigma_sum = pars$logV_sigma_sum
 sigma <- pars$sigma
 
-plot.df <- tibble(Level = c("Among Orders",
-                               "Among Families w/in Order",
-                               "Among Genera w/in Families",
-                               "Among Species w/in Genera"),
-                     relVar = c(1, lambda))
-plot.df$Level <- factor(plot.df$Level, levels = rev( c("Among Orders",
-                                             "Among Families w/in Order",
-                                             "Among Genera w/in Families",
-                                             "Among Species w/in Genera")))
-ggplot(plot.df, aes(x = relVar, y = Level )) +
-  geom_col() +
-  xlab("Relative Variance") + 
-  theme(axis.title.y = element_blank()) +
-  scale_x_continuous(limits = c(0, 4), expand = c(0, 0), breaks = c(0, 2, 4))
-
 nsims <- 100
-est_sigma_p <- est_V_sd <- rep(NA, nsims)
+sim_beta_method <- est_beta_method <- est_V_sd <- rep(NA, nsims)
 
 for (sim in 1:nsims) {
 ## Generate Taxa-level parameters
@@ -183,27 +179,24 @@ for (g in 1:n_g) {
 }
 
 # get species beta_gj
-sim_species_beta_gj <- sim_beta_gj[ which(ParentChild_gz[,4] == 4),]
+sim_species_beta_gj <- sim_beta_gj[ which(ParentChild_gz[,4] == 5),]
 sim_sd_beta_gj <- apply(X = sim_species_beta_gj, FUN = sd, MAR = 2)
 
 ## simulate the data
-
-
-V <- exp(sim_beta_gj[ which(ParentChild_gz[,4]==4),1])
-n_pow <- sim_beta_gj[ which(ParentChild_gz[,4]==4),2]
-Eo <- sim_beta_gj[ which(ParentChild_gz[,4]==4),3]
-sigma_p <- 0.005
+V <- exp(sim_beta_gj[ which(ParentChild_gz[,4]==5),1])
+n_pow <- sim_beta_gj[ which(ParentChild_gz[,4]==5),2]
+Eo <- sim_beta_gj[ which(ParentChild_gz[,4]==5),3]
 n_d <- nrow(all.dat)
 invtemp = all.dat$inv.temp
 logW = log(all.dat$W)
 taxa_id = g_i_i
-paper = all.dat$SourceNo 
 mu = rep(NA, n_d)
-## simulate paper effects
-beta_p <- rnorm(n = n_p, mean = 0, sd = sigma_p)
+## simulate method effects
+beta_method <- runif(1, min = -1, max = 0)
+
 
 for(id in 1:n_d){
-  mu[ id ] =  Eo[ taxa_id[ id ] ] * invtemp[ id ] + n_pow[ taxa_id[ id ] ]* logW[ id  ] - log(V[ taxa_id[ id ] ]) + beta_p[ paper[ id ] ]
+  mu[ id ] =  Eo[ taxa_id[ id ] ] * invtemp[ id ] + n_pow[ taxa_id[ id ] ]* logW[ id  ] - log(V[ taxa_id[ id ] ]) - beta_method * method_mat[ id, 2]
 }
 
 minuslogpo2 <- rnorm(n = n_d, 
@@ -218,18 +211,19 @@ data <- list(PC_gz = PC_gz,
              taxa_id = g_i_i -1,
              minuslogpo2 = minuslogpo2,
              spc_in_PCgz = spc_in_PC_gz -1,
-             paper = all.dat$SourceNo - 1
+             method_mat =  method_mat[,-1]
              
 )
 
 parameters = list(alpha_j = rep(0,n_j),
                   L_z = rep(1, 6),
-                  log_lambda = rep(0, length(unique(PC_gz[,2])) -1),
+                  log_lambda = rep(-1, length(unique(PC_gz[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
-                  beta_p = rep(0, times = n_p),
-                  logsigma = 0,
-                  logsigma_p = 0
+                  beta_method = 0,
+                  logsigma = 0
 )
+
+
 Random <- c("beta_gj")
 model <- "hierarchical_mi"
 compile(paste0("code/TMB/", model, ".cpp"))
@@ -252,34 +246,25 @@ rep <- sdreport(obj)
 beta_gj_fitted <- matrix(rep$par.random, nrow = n_g, ncol = n_j)
 
 # get species beta_gj
-fitted_species_beta_gj <- beta_gj_fitted[ which(ParentChild_gz[,4] == 4),]
+fitted_species_beta_gj <- beta_gj_fitted[ which(ParentChild_gz[,4] == 5),]
 fitted_sd_beta_gj <- apply(X = fitted_species_beta_gj, FUN = sd, MAR = 2)
 
 est_pars <- extract_pars(opt)
 est_V_sd[sim] <- est_pars$logV_sigma_sum
-est_sigma_p[sim] <- exp(opt$par[grep(names(opt$par), pattern = "logsigma_p")])
+est_beta_method[sim] <- opt$par[grep(names(opt$par), pattern = "beta_method")]
+sim_beta_method[sim] <- beta_method
 }
 
-hist(est_sigma_p, xlab = expression(sigma[p]),las = 1, main = "",
-     cex.lab = 1.5,cex.axis = 1.5)
-box()
+
 
 # compare to fit to real data
-real_est <- readRDS(file = "analysis/modelfit.RDS")
-real_pars <- extract_pars(real_est$opt)
-lambda <- (real_pars$lambda)
-real_pars$logV_sigma_sum
-plot.df <- tibble(Level = c("Among Orders",
-                            "Among Families w/in Order",
-                            "Among Genera w/in Families",
-                            "Among Species w/in Genera"),
-                  relVar = c(1, lambda))
-plot.df$Level <- factor(plot.df$Level, levels = rev( c("Among Orders",
-                                                       "Among Families w/in Order",
-                                                       "Among Genera w/in Families",
-                                                       "Among Species w/in Genera")))
-ggplot(plot.df, aes(x = relVar, y = Level )) +
-  geom_col() +
-  xlab("Relative Variance") + 
-  theme(axis.title.y = element_blank()) +
-  scale_x_continuous(limits = c(0, 4), expand = c(0, 0), breaks = c(0, 2, 4))
+
+sim_df <- tibble(simulated = sim_beta_method,
+                 estimated = est_beta_method)
+
+ggplot(data = sim_df, aes(x = simulated, y = estimated)) +
+  geom_point(size = 2) +
+  xlab("Simulated Parameter Value") +
+  ylab("Estimated Parameter Value") +
+  geom_abline(slope = 1, linewidth = 1)
+
