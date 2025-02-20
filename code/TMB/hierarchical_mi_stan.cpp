@@ -12,6 +12,8 @@
     matrix<Type> Return_rr(n_rows, n_rows);
     Cov_rr.setZero();
     L_rc.setZero();
+    // try exponentiating the first element of L_val to force this to be positive
+    L_val(0) = exp(L_val(0) ); 
     // Loadings matrix with zero upper-diagonal
     int Count = 0;
     
@@ -50,22 +52,23 @@
     DATA_VECTOR( logW );
     DATA_IVECTOR( taxa_id );
     DATA_VECTOR( minuslogpo2 );
+    DATA_UPDATE( minuslogpo2 );
     DATA_IVECTOR( spc_in_PCgz );
-    DATA_IVECTOR( paper );
+    DATA_VECTOR( method_mat );
     
     // Parameters 
     PARAMETER_VECTOR( alpha_j );
     PARAMETER_VECTOR( L_z );
     PARAMETER_VECTOR( log_lambda ); // log-multiplier for process-error covariance for different taxonomic levels
     PARAMETER_MATRIX( beta_gj );
-    PARAMETER_VECTOR(beta_p); // effect of each paper on measured pcrit
+    PARAMETER( beta_method ); // effect of paper method (SMR) on measured pcrit
     PARAMETER( logsigma );
-    PARAMETER( logsigma_p );
+    
+  
     
     
     // Derived data and parameters
     Type sigma = exp(logsigma);
-    Type sigma_p = exp(logsigma_p);
     int n_j = beta_gj.row(0).size();
     int n_i = spc_in_PCgz.size();
     int n_g = PC_gz.col(0).size();
@@ -141,18 +144,18 @@
         jnll_comp(0) += MVNORM( tmpCov_jj )( Deviation_j );
       }
     
-    // random effects for paper
-    jnll_comp(0) += -sum(dnorm(beta_p, 0, sigma_p, true) );
+  
 
     // Probability of the data
     for( int id=0; id<n_d; id++){
-     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) - log(V( taxa_id( id ) )) + beta_p( paper( id ) );
+     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) - log(V( taxa_id( id ) )) - beta_method * method_mat( id );
     }
+    
     
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );
     
     // priors on log_lambda
-    jnll_comp( 2 ) = - sum( dnorm(log_lambda, 0, 4, true) );
+    jnll_comp( 2 ) = - sum( dnorm(log_lambda, 0, 10, true) );
     
     Type jnll = jnll_comp.sum();
     

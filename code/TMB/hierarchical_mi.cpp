@@ -50,22 +50,21 @@
     DATA_VECTOR( logW );
     DATA_IVECTOR( taxa_id );
     DATA_VECTOR( minuslogpo2 );
+    DATA_UPDATE( minuslogpo2 );
     DATA_IVECTOR( spc_in_PCgz );
-    DATA_IVECTOR( paper );
+    DATA_VECTOR( method_mat );
     
     // Parameters 
     PARAMETER_VECTOR( alpha_j );
     PARAMETER_VECTOR( L_z );
     PARAMETER_VECTOR( log_lambda ); // log-multiplier for process-error covariance for different taxonomic levels
     PARAMETER_MATRIX( beta_gj );
-    PARAMETER_VECTOR(beta_p); // effect of each paper on measured pcrit
+    PARAMETER( beta_method ); // effect of paper method (SMR) on measured pcrit
     PARAMETER( logsigma );
-    PARAMETER( logsigma_p );
-    
+
     
     // Derived data and parameters
     Type sigma = exp(logsigma);
-    Type sigma_p = exp(logsigma_p);
     int n_j = beta_gj.row(0).size();
     int n_i = spc_in_PCgz.size();
     int n_g = PC_gz.col(0).size();
@@ -102,14 +101,12 @@
     }
     
     
-  
-    
     V = spc_ij.col(0);
     n_pow = spc_ij.col(1);
     Eo = spc_ij.col(2);
     vector<Type> mu( n_d );
     
-    // Objective funcction
+    // Objective function
     vector<Type> jnll_comp( 2 );
     jnll_comp.setZero();
       
@@ -141,25 +138,30 @@
         jnll_comp(0) += MVNORM( tmpCov_jj )( Deviation_j );
       }
     
-    // random effects for paper
-    jnll_comp(0) += -sum(dnorm(beta_p, 0, sigma_p, true) );
-
+    
     
     // Probability of the data
     for( int id=0; id<n_d; id++){
-     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) - log(V( taxa_id( id ) )) + beta_p( paper( id ) );
+     mu( id ) =  Eo( taxa_id( id ) ) * invtemp( id ) + n_pow( taxa_id( id ) ) * logW( id  ) - log(V( taxa_id( id ) ))  - beta_method * method_mat( id );
     }
     
+    
+    // Get NLL of the data
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );
     
     
-    
     Type jnll = jnll_comp.sum();
+    Type nll_data = jnll_comp ( 1 );
     
     // Return jnll
     // Add Reports
     ADREPORT(spc_ij);
+    ADREPORT(lambda);
     REPORT(Cov_jj);
+    REPORT( mu );
+    REPORT( nll_data );
+    
+  
     return jnll;
   }
   

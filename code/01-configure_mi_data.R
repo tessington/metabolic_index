@@ -1,5 +1,4 @@
-library(tidyr)
-library(dplyr)
+library(tidyverse)
 
 rm(list = ls())
 # save to CSV file  
@@ -57,10 +56,23 @@ for (i in 1:length(unique.taxa)) {
 
 }
 nrow(all.dat)
+
 # Add uncertain order for Capitellidae
-all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellidae"
+all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellida"
+# create Genus spp. names for taxa identified to genus
+no_spc <- which(is.na(all.dat$Species))
+for (i in no_spc) {
+  all.dat$Species[i] <- paste(all.dat$Genera[i], "spp.")
+}
+
 
 saveRDS(all.dat, file = "data/alldata_taxonomy.RDS")
+
+all.dat <- readRDS(file ="data/alldata_taxonomy.RDS")
+
+# Remove unknown methods
+rem_unknown <- T
+if (rem_unknown) all.dat <- dplyr::filter(all.dat, !Method == "unknown")
 
 
 # Get summary statistics ####
@@ -74,8 +86,41 @@ sum_by_species <- all.dat %>%
 sum_by_study <- all.dat %>%
   filter(lowest.taxon == "species") %>%
   group_by(Source) %>%
-  summarise(nspc = length(unique(Species))) %>%
+  summarise(nspc = length(unique(Species)), 
+            ngenus = length(unique(Genera)),
+            nfamily = length(unique(Family)),
+            norder = length(unique(Order)),
+            nclass = length(unique(Class))
+            )
+
+sum_by_author <- all.dat %>%
+  filter(lowest.taxon == "species") %>%
+  group_by(SharedAuthor) %>%
+  summarise(nspc = length(unique(Species)), 
+            ngenus = length(unique(Genera)),
+            nfamily = length(unique(Family)),
+            norder = length(unique(Order)),
+            nclass = length(unique(Class))
+  )
+
+spc_by_study <- sum_by_study %>%
   group_by(nspc) %>%
+  summarise(nstudies = n())
+
+genus_by_study <- sum_by_study %>%
+  group_by(ngenus) %>%
+  summarise(nstudies = n())
+
+family_by_study <- sum_by_study %>%
+  group_by(nfamily) %>%
+  summarise(nstudies = n())
+
+order_by_study <- sum_by_study %>%
+  group_by(norder) %>%
+  summarise(nstudies = n())
+
+class_by_study <- sum_by_study %>%
+  group_by(nclass) %>%
   summarise(nstudies = n())
 
 sum_by_temp_w <- all.dat %>%
@@ -90,3 +135,12 @@ print(hist_temp)
 hist_w <- ggplot(sum_by_temp_w, aes(x = nw)) + 
   geom_histogram()
 print(hist_w)
+
+
+# output for supplemental table
+taxa_summary <- dplyr::select(all.dat, Source, Species, Phylum, Order, Family)
+taxa_summary <- dplyr::distinct(taxa_summary)
+  
+
+# write to csv.file,
+write.csv(taxa_summary, file = "analysis/taxa_source.csv", row.names = F)
