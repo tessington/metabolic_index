@@ -260,7 +260,7 @@ if (model_diagnostics) {
 
 
 
-# Fit base + method model Order and Lower ####
+# Fit base + method model Order  ####
 taxa.list <- c("Order", "Family", "Genera", "Species")
 all.dat$SourceNo <- as.numeric(as.factor(all.dat$Source))
 all.dat$TeamNo <- as.numeric(as.factor(all.dat$SharedAuthor))
