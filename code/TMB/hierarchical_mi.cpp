@@ -83,7 +83,7 @@
     vector<Type> lambda(n_l);
     
     
-    // to make life easier, extract the species-level parameters into a matrix, and convert logAo to Ao
+    // to make life easier, extract the species-level parameters into a matrix, and convert log(V) to V
     
     for (int i = 0; i <n_i; i++) {
       for (int j = 0; j<n_j; j++) {

@@ -21,3 +21,14 @@ ggsave(filename = "Figures/taxa_predictions.png",
       height = 6,
       units = "in")
 
+taxa.name <- "Gadidae"
+lookup_taxa(taxa.name, ylim)
+
+taxa.name <- "Perciformes"
+lookup_taxa(taxa.name, ylim)
+
+taxa.name <- "Teleostei"
+lookup_taxa(taxa.name, ylim)
+
+taxa.name = "Elasmobranchii"
+lookup_taxa(taxa.name, ylim)

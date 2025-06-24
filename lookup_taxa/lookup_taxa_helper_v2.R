@@ -34,7 +34,7 @@ fit_dens <- function(dens, x, p) {
 # master function to solve for the density that produces a tail probability equal
 # to target, and to give the limits of that range (the inner p percentile interval)
 get_x_range <- function(x, p) {
-  dens <- uniroot(f = fit_dens, interval = c(0.01, 1), x = x, p = 0.9)
+  dens <- uniroot(f = fit_dens, interval = c(0.01, 8), x = x, p = 0.9)
   smooth <- bkde (x)
   index <- which(smooth$y >=dens$root)
   xbounds = c(min(smooth$x[index]), max(smooth$x[index]))
@@ -62,6 +62,15 @@ lookup_taxa <- function(taxa.name, ylim) {
     if (sims$level[1] == 3) taxa_dat <- dplyr::filter(all.dat, tolower(Family) == ltaxa.name)
     
     Wmed <- median(all.dat$W/ wref)
+    
+    # get prediction interval for V, Eo, n
+    Eo_range <- get_x_range(x = sims$Eo, p = 0.9)
+    V_range <- get_x_range(x = exp(sims$logV), p = 0.9)
+    n_range <- get_x_range(x = sims$n, p = 0.9)
+    
+    cat(" Eo: ", Eo_range[1], " - ", median(sims$Eo), " - ", Eo_range[2], "\n")
+    cat(" V: ", V_range[1], " - ", median(sims$logV)," - ", V_range[2], "\n")
+    cat(" n: ", n_range[1], " - ",median(sims$Eo), " - ", n_range[2], "\n")
     
     # calculate Pcrit for 10degrees
     t_est1 <- 10
