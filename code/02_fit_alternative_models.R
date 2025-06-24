@@ -533,30 +533,12 @@ beta_se <- matrix(re[grep(rownames(re), pattern = "beta_gj"),2], nrow = n_g, nco
 beta_method <- matrix(fixef[grep(rownames(fixef), pattern = "beta_method"),1], nrow = n_methods)
 beta_method_se <- matrix(fixef[grep(rownames(fixef), pattern = "beta_method"),2], nrow = n_methods)
 
-## Summarize Estimates ####
-#sum_est <- summarize_estimates(beta_mle, beta_se, ParentChild_gz, taxa.list)
 
 ## Plot Estimates ####
 plot_est <- F
 if (plot_est) {
   plot_by_group(sum_est)
 }
-
-#SpeciesEst <- sum_est$SpeciesEst
-#SpeciesEst$V = exp(SpeciesEst$logV)
-## Plot model diagnostics ####
-#model_diagnostics <- T
-#if (model_diagnostics) {
-#  p_diagnostic <- plot_diagnostics(model= "method", 
-#                                   Pcrit = all.dat$Pcrit, 
-#                                   inv.temp = all.dat$inv.temp, 
-#                                   W = all.dat$W, 
-#                                   SpeciesEst = SpeciesEst,
-#                                   beta_method = beta_method,
-#                                   method_mat = method_mat)
-  
-  
-#}
 
 
 
