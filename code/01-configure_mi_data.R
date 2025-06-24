@@ -1,9 +1,11 @@
 library(tidyverse)
+library(readxl)
 
 rm(list = ls())
-# save to CSV file  
-all.dat <- read.csv(file = "data/allmidata_alphia.csv", header = T)
-
+# read data from file
+all.dat <- read_excel(path ="data/allmidata_alphia.xlsx")
+# make all lower case scientific names for cross compatability
+all.dat$scientific.name <- tolower(all.dat$scientific.name)
 
 
 #Use the libraries
@@ -144,3 +146,4 @@ taxa_summary <- dplyr::distinct(taxa_summary)
 
 # write to csv.file,
 write.csv(taxa_summary, file = "analysis/taxa_source.csv", row.names = F)
+

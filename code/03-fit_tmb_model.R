@@ -1,4 +1,5 @@
 # Code fit hierarchical model to Arrenhius Equation
+rm(list = ls())
 library(dplyr)
 library(MASS)
 library(TMB)
@@ -22,21 +23,12 @@ theme_update(panel.grid.major = element_blank(),
 )
 
 ## load functions ####
-source("code/fit_model_funs.R")
-source("code/calculate_EDF_fn.R")
+source("code/helper/fit_model_funs.R")
+source("code/helper/calculate_EDF_fn.R")
 
 ## load data ####
 all.dat <- load_data()
-rem_styela <- T
-if (rem_styela) all.dat <- all.dat %>%
-  filter(Species != "Styela plicata")
-rem_unknown <- T
-all.dat$EstMethod_Metric <- tolower(all.dat$EstMethod_Metric)
-if (rem_unknown) all.dat <- dplyr::filter(all.dat, !Method == "unknown", !EstMethod_Metric == "unknown")
-
-# Keep only oxygen consumption methods
-all.dat <- dplyr::filter(all.dat, Method == "OxygenConsumption")
-
+all.dat <- filter_data(all.dat)
 method_mat <- model.matrix(~ EstMethod_Metric , all.dat)
 n_methods <- ncol(method_mat) -1
 
@@ -93,7 +85,7 @@ data <- list(PC_gz = PC_gz,
              method_mat = method_mat[,-1]
 )
 
-parameters = list(alpha_j = rep(0,n_j),
+parameters = list(alpha_j = c(0, 0, 0),
                   L_z = rep(1, 6),
                   log_lambda = rep(-1, length(unique(PC_gz[,2])) -1),
                   beta_gj = matrix(0, nrow = n_g, ncol = n_j),
@@ -167,7 +159,7 @@ if (taxa.list[1] == "Class") {
   ## Plot Orders #####
   
   
-  Est.2.plot <- dplyr::filter(sum_est$OrderEst, NoSpecies >=2)
+  Est.2.plot <- dplyr::filter(sum_est$OrderEst, NoSpecies >=1)
   Est.2.plot <- Est.2.plot %>%
     mutate(Order_num = add_number(Order, NoSpecies))
   
@@ -198,6 +190,9 @@ if (taxa.list[1] == "Class") {
   Est.2.plot <- dplyr::filter(sum_est$FamilyEst, NoSpecies >=2)
   Est.2.plot <- Est.2.plot %>%
     mutate(Family_num = add_number(Family, NoSpecies))
+  Est.2.plot$Vse <- with(Est.2.plot, logVmax - logV)
+  Est.2.plot$Eose <- with(Est.2.plot, Eomax- Eo)
+  Est.2.plot$nse <- with(Est.2.plot, nmax- n)
   Vplotf <- plotest(Est.2.plot, logV, Family_num, logVmin, logVmax)
   Vplotf <- Vplotf + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("Family")
   Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
@@ -205,11 +200,11 @@ if (taxa.list[1] == "Class") {
                              axis.title.y = element_blank()
                              )  +
     xlab(expression("E"[o]))+
-    xlim(c(0, 0.7)) +
-    ggtitle("Figure 3")
+    xlim(c(-.2, 0.7)) +
+    ggtitle("Figure 2")
   
   nplotf <- plotest(Est.2.plot, n, Family, nmin, nmax)
-  nplotf <- nplotf + xlim(c(-0.2, 0.05)) + theme(axis.text.y = element_blank(),
+  nplotf <- nplotf + xlim(c(-0.25, 0.15)) + theme(axis.text.y = element_blank(),
                                                  axis.title.y = element_blank()
   )  
 family_plot <-  ggarrange(Vplotf, 
@@ -259,3 +254,82 @@ ggsave(filename= "figures/diagnostic.png",
        width = 1029,
        height = 1029)
 
+
+# Get species-level trait variance and make table
+sampled_species_standard_deviation <- apply(X = SpeciesEst[,c("logV","n", "Eo")], MAR = 2, FUN = sd)
+
+# get variance-covariance from cholesky matrix
+L_z <- fixef[grep(rownames(fixef), pattern = "L_z"),1]
+L <- matrix(0, nrow = n_j, ncol = n_j)
+#### Fill iin Cholesky Matrix ####
+Count = 1
+D <- 0.00001
+Count = 1;
+for(r in 1:3){
+  for(c in 1:3){
+    if(r == c) {
+      L[r,c] = L_z[Count]
+      Count<- Count + 1
+    }
+    if(r>c){
+      L[r,c] = L_z[Count]
+      Count <- Count + 1
+    }
+  }
+}
+
+sigma <- L %*% t(L) + D
+
+# Get all species sigma
+all_species_standard_deviation <- sqrt(diag(sigma * (sum(lambda[,1]) + 1)))
+species_in_family_standard_deviation <-sqrt(diag(sigma * (sum(lambda[2:3,1]) + 1)))
+
+species_standard_deviation_matrix <- round(matrix(c(sampled_species_standard_deviation,
+                                              all_species_standard_deviation,
+                                              species_in_family_standard_deviation),
+                                            nrow = 3,
+                                            ncol = 3,
+                                            byrow = T),
+                                           2)
+rownames(species_standard_deviation_matrix) <- c("Sampled Species",
+                                                 "All Species",
+                                                 "Species w/in Family")
+colnames(species_standard_deviation_matrix) <- c("log(V)", "n", "Eo")
+print(species_standard_deviation_matrix)
+
+## a plot of all species pcrit.
+alldata_plot_temperature <- ggplot(data = all.dat, aes(x = inv.temp, y = log(Pcrit), col = as.factor(Phylum) )) + 
+  scale_colour_viridis_d(option = "turbo") +
+  geom_point(size = 2) +
+  #xlab (expression(over(1,T) + over(1,T[ref]))) + 
+  xlab("Inverse Temperature") + 
+  ylab(bquote( log( p["crit"] ) ) ) +
+  labs(col = "Phylum")
+
+alldata_plot_w<- ggplot(data = all.dat, aes(x =log(W), y = log(Pcrit), col = as.factor(Phylum) )) + 
+  scale_colour_viridis_d(option = "turbo") +
+  geom_point(size = 2) +
+  xlab ("log(W)" ) + 
+  ylab(bquote( log( p["crit"] ) ) ) +
+  labs(col = "Phylum")
+
+alldata_plot <- 
+  cowplot::plot_grid(alldata_plot_temperature + theme(legend.position="none"),
+             alldata_plot_w + theme(legend.position="none"),
+             nrow = 1,
+             align = "v")
+  
+legend <- get_legend(
+    # create some space to the left of the legend
+    alldata_plot_temperature + theme(legend.box.margin = margin(0, 0, 0, 12))
+  )
+  
+alldata_plot <- plot_grid(alldata_plot, legend, rel_widths = c(3, 0.85) )
+
+ggsave(file = "figures/alldata_plot.png",
+       plot = alldata_plot,
+       units = "px",
+       scale = 2,
+       height = 500,
+       width = 1200,
+       bg = "white")
