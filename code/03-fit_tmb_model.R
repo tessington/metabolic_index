@@ -170,8 +170,7 @@ if (taxa.list[1] == "Class") {
                              axis.title.y = element_blank()
                              )  +
     xlab(expression("E"[o])) +
-    xlim(c(0, 0.75)) +
-    ggtitle("Figure 2")
+    xlim(c(0, 0.75))
 
   
   nploto <- plotest(Est.2.plot, n, Order, nmin, nmax)
@@ -200,8 +199,7 @@ if (taxa.list[1] == "Class") {
                              axis.title.y = element_blank()
                              )  +
     xlab(expression("E"[o]))+
-    xlim(c(-.2, 0.7)) +
-    ggtitle("Figure 2")
+    xlim(c(-.2, 0.7)) 
   
   nplotf <- plotest(Est.2.plot, n, Family, nmin, nmax)
   nplotf <- nplotf + xlim(c(-0.25, 0.15)) + theme(axis.text.y = element_blank(),
@@ -296,6 +294,9 @@ rownames(species_standard_deviation_matrix) <- c("Sampled Species",
                                                  "Species w/in Family")
 colnames(species_standard_deviation_matrix) <- c("log(V)", "n", "Eo")
 print(species_standard_deviation_matrix)
+# modify the first column to get V
+exp(species_standard_deviation_matrix[,"log(V)"])* exp(fixef[rownames(fixef) == "alpha_j","Estimate"])[1]
+
 
 ## a plot of all species pcrit.
 alldata_plot_temperature <- ggplot(data = all.dat, aes(x = inv.temp, y = log(Pcrit), col = as.factor(Phylum) )) + 
@@ -333,3 +334,15 @@ ggsave(file = "figures/alldata_plot.png",
        height = 500,
        width = 1200,
        bg = "white")
+
+# print out parameter values reported in manuscript
+
+## levels of variance - the log_lambdas
+print(exp(fixef[rownames(fixef) == "log_lambda", "Estimate"]))
+
+## print out alpha_j - the mean trait values
+fixef[rownames(fixef) == "alpha_j", ]
+### First element is log(V).  Convert to V and get SE using delta method
+
+exp(fixef[rownames(fixef) == "alpha_j", "Estimate"][1]) 
+exp(fixef[rownames(fixef) == "alpha_j", "Estimate"][1]) * fixef[rownames(fixef) == "alpha_j", "Std. Error"][1]
