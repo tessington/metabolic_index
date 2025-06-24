@@ -1,4 +1,4 @@
-# Remarkable similarity of oxygen tolerance across marine taxa when standardized for temperature and body size
+# Predicting oxygen tolerance of marine fauna through a taxonomic hierarchical analysis
 # Summary of the study
 We used phylogenetic imputation on experimental data on taxonomically diverse marine taxa that related critical oxygen pressure (pO2crit) to temperature and body size. We find that pcrit declines with temperature and body size, but little similarity in the scaling across taxonomic groups.  Phylogentically imputed pcrit values led to greater predictive performance in species distribution models of groundfish in the Northeast Pacific Ocean.
 
