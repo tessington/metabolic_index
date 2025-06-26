@@ -294,8 +294,6 @@ rownames(species_standard_deviation_matrix) <- c("Sampled Species",
                                                  "Species w/in Family")
 colnames(species_standard_deviation_matrix) <- c("log(V)", "n", "Eo")
 print(species_standard_deviation_matrix)
-# modify the first column to get V
-exp(species_standard_deviation_matrix[,"log(V)"])* exp(fixef[rownames(fixef) == "alpha_j","Estimate"])[1]
 
 
 ## a plot of all species pcrit.

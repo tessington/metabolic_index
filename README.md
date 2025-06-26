@@ -13,7 +13,8 @@ All working R files are in subdirectory "code"
 - 04-fit_TMB_stan.R.  Runs the hierarchical model using tmbstan.  Does not need to be run, as results have been generated and saved in analysis/mcmcoutput.RDS
 - 05-sim_new_taxa.R.  Take the output of tmbstan, and then simulates a random species within each specified taxonomic level
 - 06-summarize_sims.R. Code used to summarize results, organized by taxonomic grouping and used to create supplemental table
-- 07-sdm.R.  Fits alternative species distribution models for four groundfish species, and summarizes model selection statistics using AIC
+- 08-plot_predictions.R.  Code to plot predicted species level pcrit given a higher taxonomic level, at 10 and 20 degrees C
+- 08-sdm.R.  Fits alternative species distribution models for four groundfish species, and summarizes model selection statistics using AIC
 - helper/fit_model_funs.R.  Contains numerous functions that are called in the above source files.  It is called within those source files.
 - helper/plot.phylo2.funs.R.  Modified version of plot.phylo in ape package
 - helper/calculate_EDF_fn.R.  Calculates empirical degrees of freedom for cAIC calculations (uased by 02-fit_alternative_models.R
