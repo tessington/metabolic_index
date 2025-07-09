@@ -614,6 +614,7 @@ summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
       # lookup row
       row_in_PC <- grep(x = ParentChild_gz$ChildName, pattern = taxa.name)
       cat("This taxa is in the dataset")
+      cat("\n")
       return(row_in_PC)
     }
     
