@@ -613,6 +613,7 @@ summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
     if (taxa_in_data) {
       # lookup row
       row_in_PC <- grep(x = ParentChild_gz$ChildName, pattern = taxa.name)
+      cat("This taxa is in the dataset")
       return(row_in_PC)
     }
     
@@ -682,6 +683,8 @@ summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
           if (length(row_in_PC) > 0) {
             cat( "using estimate from the following taxa: \n" )
             cat( collapsed_taxon )
+            cat("\n")
+            
             return(row_in_PC)
           } else {
             message("no matching taxonomic rank found in data")
