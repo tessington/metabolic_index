@@ -48,7 +48,7 @@ result_df$species[result_df$species == species.names[3] ] <- "Cottidae"
 result_df <- result_df %>%
   mutate(
     species_factor = factor(species, levels = rev(unique(species))),  # so species appear in the same order as the plot
-    ypos = as.numeric(species_factor) + ifelse(method == "smr", 0.2, -0.2)
+    ypos = as.numeric(species_factor) + ifelse(method == "smr", -0.1, 0.1)
   )
 
 # colors to use:
@@ -65,7 +65,7 @@ plot_results <- ggplot(data = result_df, aes(y = ypos, x = log_pcrit, col = meth
   geom_point(size = 4) +
   geom_errorbarh(aes(xmin = log_pcrit - se_pcrit,
                      xmax = log_pcrit + se_pcrit),
-                 linewidth = 1.1) +
+                 linewidth = 1, height = 0.1) +
   scale_y_continuous(
     breaks = 1:length(unique(result_df$species_factor)),
     labels = levels(result_df$species_factor)
