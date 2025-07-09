@@ -107,10 +107,17 @@
     vector<Type> mu( n_d );
     
     // Objective function
-    vector<Type> jnll_comp( 2 );
+    vector<Type> jnll_comp( 3 );
     jnll_comp.setZero();
       
     using namespace density;
+    
+    // priors on log_lambda
+    Type df = 3;
+    Type tsigma = 5;
+    int nlambda = log_lambda.size();
+    jnll_comp( 2 ) = - sum( dt(log_lambda, df, true) ) - log( tsigma ) * nlambda;
+  
     
     // Process covariance
     Type min_var = 0.001;

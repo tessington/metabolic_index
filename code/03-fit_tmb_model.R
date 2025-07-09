@@ -1,4 +1,5 @@
 # Code fit hierarchical model to Arrenhius Equation
+options(echo = FALSE)
 rm(list = ls())
 library(dplyr)
 library(MASS)
@@ -33,6 +34,10 @@ method_mat <- model.matrix(~ EstMethod_Metric , all.dat)
 n_methods <- ncol(method_mat) -1
 
 ## Summarise data by taxa ####
+phylum_summary <- all.dat %>%
+  group_by(Phylum) %>%
+  summarise(NoClass = n_distinct(Class), NoOrder = n_distinct(Order), NoFamily = n_distinct(Family),  NoGenus = n_distinct(Genera), NoSpecies = n_distinct(Species))
+
 class_summary <- all.dat %>%
   group_by(Class) %>%
   summarise(NoOrder = length(unique(Order)), NoFamily = length(unique(Family)),  NoSpecies = length(unique(Species)))
@@ -58,9 +63,7 @@ all.dat$W <- all.dat$W/wref
 all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1/(tref + 273.15))
 all.dat$Pcrit_atm<- all.dat$Pcrit / 101.325 # convert from kPa to atm
 all.dat$minuslogpo2 <- - log(all.dat$Pcrit)
-taxa.list <- c("Class","Order", "Family", "Genera", "Species")
-all.dat$SourceNo <- as.numeric(as.factor(all.dat$Source))
-all.dat$TeamNo <- as.numeric(as.factor(all.dat$SharedAuthor))
+taxa.list <- c("Phylum", "Class","Order", "Family", "Genera", "Species")
 ### Create new ParentChild matrix for reduced taxonomic structure ####
 taxa.info <- make_taxa_tree(all.dat, taxa.list)
 ParentChild_gz <- taxa.info$ParentChild_gz
@@ -73,6 +76,7 @@ n_g <- taxa.info$n_g
 n_i <- taxa.info$n_i
 spc_in_PC_gz <- taxa.info$spc_in_PC_gz
 
+augmented_df
 
 ## Setup TMB ####
 data <- list(PC_gz = PC_gz,
@@ -80,7 +84,7 @@ data <- list(PC_gz = PC_gz,
              invtemp = all.dat$inv.temp,
              logW = log(all.dat$W),
              taxa_id = g_i_i -1,
-             minuslogpo2 = all.dat$minuslogpo2,
+             minuslogpo2 = -log(all.dat$Pcrit),
              spc_in_PCgz = spc_in_PC_gz -1,
              method_mat = method_mat[,-1]
 )
@@ -111,7 +115,6 @@ rep = sdreport( obj,
                 getReportCovariance = TRUE, 
                 getJointPrecision=TRUE)
 
-saveRDS(list(obj = obj, opt = opt, rep = rep), "analysis/modelfit.RDS")
 
 re <- summary(rep, "random")
 fixef <- summary(rep, "fixed")
@@ -129,13 +132,40 @@ plot_est <- T
 if (plot_est) {
   add_number <- function(txt, num) paste0(txt, " (", num,")")
   
-if (taxa.list[1] == "Class") {
+  if (taxa.list[1] == "Phylum") {
+    Est.2.plot <- dplyr::filter(sum_est$PhylumEst, NoSpecies >=2)
+    Est.2.plot <- Est.2.plot %>%
+      mutate(Phylum_num = add_number(Phylum, NoSpecies))
+    
+    Vploto <- plotest(Est.2.plot, logV, Phylum_num, logVmin, logVmax)
+    Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("")
+    Eoploto <- plotest(Est.2.plot, Eo, Phylum, Eomin, Eomax)
+    Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
+                               axis.title.y = element_blank()
+    )  +
+      xlab(expression("E"[o])) +
+      xlim(c(0, 0.75)) 
+    
+    
+    nploto <- plotest(Est.2.plot, n, Phylum, nmin, nmax)
+    nploto <- nploto + xlim(c(-0.175, 0.05)) + theme(axis.text.y = element_blank(), 
+                                                     axis.title.y = element_blank()
+    )
+    
+    phylum_plot <- ggarrange(Vploto, 
+                            nploto,
+                            Eoploto,
+                            nrow = 1)
+    print(phylum_plot)
+  }
+
+  if (taxa.list[1] %in% c("Phylum", "Class") ) {
   Est.2.plot <- dplyr::filter(sum_est$ClassEst, NoSpecies >=2)
   Est.2.plot <- Est.2.plot %>%
     mutate(Class_num = add_number(Class, NoSpecies))
   
   Vploto <- plotest(Est.2.plot, logV, Class_num, logVmin, logVmax)
-  Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("Class")
+  Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("")
   Eoploto <- plotest(Est.2.plot, Eo, Class, Eomin, Eomax)
   Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
                              axis.title.y = element_blank()
@@ -157,14 +187,13 @@ if (taxa.list[1] == "Class") {
   }
   
   ## Plot Orders #####
-  
-  
-  Est.2.plot <- dplyr::filter(sum_est$OrderEst, NoSpecies >=1)
+
+  Est.2.plot <- dplyr::filter(sum_est$OrderEst, NoSpecies >=2)
   Est.2.plot <- Est.2.plot %>%
     mutate(Order_num = add_number(Order, NoSpecies))
   
   Vploto <- plotest(Est.2.plot, logV, Order_num, logVmin, logVmax)
-  Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("Order")
+  Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("")
   Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
   Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
                              axis.title.y = element_blank()
@@ -193,7 +222,7 @@ if (taxa.list[1] == "Class") {
   Est.2.plot$Eose <- with(Est.2.plot, Eomax- Eo)
   Est.2.plot$nse <- with(Est.2.plot, nmax- n)
   Vplotf <- plotest(Est.2.plot, logV, Family_num, logVmin, logVmax)
-  Vplotf <- Vplotf + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("Family")
+  Vplotf <- Vplotf + xlab("log(V)") + xlim(c(0.5, 2.5)) + ylab("")
   Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
   Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
                              axis.title.y = element_blank()
@@ -341,6 +370,14 @@ print(exp(fixef[rownames(fixef) == "log_lambda", "Estimate"]))
 ## print out alpha_j - the mean trait values
 fixef[rownames(fixef) == "alpha_j", ]
 ### First element is log(V).  Convert to V and get SE using delta method
-
 exp(fixef[rownames(fixef) == "alpha_j", "Estimate"][1]) 
 exp(fixef[rownames(fixef) == "alpha_j", "Estimate"][1]) * fixef[rownames(fixef) == "alpha_j", "Std. Error"][1]
+
+# for each species, document how many unique body sizes and unique temperatures
+
+number_bodysize_temperature <- all.dat %>%
+  group_by(Species) %>%
+  summarise(n_sizes = length(unique(W)), n_temps = length(unique(Temp)))
+n_species_2_temperature <- length(which(number_bodysize_temperature$n_temps > 2))
+n_species_2_sizes <- length(which(number_bodysize_temperature$n_sizes > 2))
+print(c(n_species_2_sizes, n_species_2_temperature))

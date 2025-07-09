@@ -1,5 +1,7 @@
 library(tidyverse)
 library(readxl)
+library(dplyr)
+conflicted::conflict_prefer("select", "dplyr")
 
 rm(list = ls())
 # read data from file
@@ -24,7 +26,7 @@ all.dat$Suborder <- NA
 all.dat$Infraorder <- NA
 all.dat$Superfamily <- NA
 all.dat$Family <- NA
-all.dat$Genera <- NA
+all.dat$Genus <- NA
 all.dat$Species <- NA
 
 lookup.taxa <- function(x, level) {
@@ -53,7 +55,7 @@ for (i in 1:length(unique.taxa)) {
   all.dat$Infraorder[taxa.index] <- lookup.taxa(classificationTree, "Infraorder")
   all.dat$Superfamily[taxa.index] <- lookup.taxa(classificationTree, "Superfamily")
   all.dat$Family[taxa.index] <- lookup.taxa(classificationTree, "Family")
-  all.dat$Genera[taxa.index] <- lookup.taxa(classificationTree, "Genus")
+  all.dat$Genus[taxa.index] <- lookup.taxa(classificationTree, "Genus")
   if(all.dat$lowest.taxon[taxa.index[1]] =="species")  all.dat$Species[taxa.index] <- lookup.taxa(classificationTree, "Species")
 
 }
@@ -64,7 +66,7 @@ all.dat$Order[which(all.dat$Family == "Capitellidae")] = "Capitellida"
 # create Genus spp. names for taxa identified to genus
 no_spc <- which(is.na(all.dat$Species))
 for (i in no_spc) {
-  all.dat$Species[i] <- paste(all.dat$Genera[i], "spp.")
+  all.dat$Species[i] <- paste(all.dat$Genus[i], "spp.")
 }
 
 
@@ -79,64 +81,23 @@ if (rem_unknown) all.dat <- dplyr::filter(all.dat, !Method == "unknown")
 
 # Get summary statistics ####
 sum_by_species <- all.dat %>%
-  filter(lowest.taxon == "species") %>%
+  dplyr::filter(lowest.taxon == "species") %>%
   group_by(Species) %>%
   summarise(nstudy = length(unique(Source))) %>%
   group_by(nstudy) %>%
   summarise(nspecies = n())
 
 sum_by_study <- all.dat %>%
-  filter(lowest.taxon == "species") %>%
+  dplyr::filter(lowest.taxon == "species") %>%
   group_by(Source) %>%
   summarise(nspc = length(unique(Species)), 
-            ngenus = length(unique(Genera)),
+            ngenus = length(unique(Genus)),
             nfamily = length(unique(Family)),
             norder = length(unique(Order)),
             nclass = length(unique(Class))
             )
 
-sum_by_author <- all.dat %>%
-  filter(lowest.taxon == "species") %>%
-  group_by(SharedAuthor) %>%
-  summarise(nspc = length(unique(Species)), 
-            ngenus = length(unique(Genera)),
-            nfamily = length(unique(Family)),
-            norder = length(unique(Order)),
-            nclass = length(unique(Class))
-  )
 
-spc_by_study <- sum_by_study %>%
-  group_by(nspc) %>%
-  summarise(nstudies = n())
-
-genus_by_study <- sum_by_study %>%
-  group_by(ngenus) %>%
-  summarise(nstudies = n())
-
-family_by_study <- sum_by_study %>%
-  group_by(nfamily) %>%
-  summarise(nstudies = n())
-
-order_by_study <- sum_by_study %>%
-  group_by(norder) %>%
-  summarise(nstudies = n())
-
-class_by_study <- sum_by_study %>%
-  group_by(nclass) %>%
-  summarise(nstudies = n())
-
-sum_by_temp_w <- all.dat %>%
-  filter(lowest.taxon == 'species') %>%
-  group_by(Species) %>%
-  summarise(ntemp = length(unique(Temp)), nw = length(unique(W)))
-
-hist_temp <- ggplot(sum_by_temp_w, aes(x = ntemp)) + 
-  geom_histogram(bins = 30)
-print(hist_temp)
-
-hist_w <- ggplot(sum_by_temp_w, aes(x = nw)) + 
-  geom_histogram()
-print(hist_w)
 
 
 # output for supplemental table

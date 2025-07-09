@@ -155,7 +155,10 @@
     jnll_comp( 1 ) = -sum( dnorm( minuslogpo2, mu, sigma, true) );
     
     // priors on log_lambda
-    jnll_comp( 2 ) = - sum( dnorm(log_lambda, 0, 5, true) );
+    Type df = 3;
+    Type tsigma = 5;
+    int nlambda = log_lambda.size();
+    jnll_comp( 2 ) = - sum( dt(log_lambda, df, true) ) - log( tsigma ) * nlambda;
     
     Type jnll = jnll_comp.sum();
     

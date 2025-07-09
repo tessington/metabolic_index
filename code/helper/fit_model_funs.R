@@ -12,14 +12,12 @@ library(KernSmooth)
 library(grid)
 library(gsw)
 
-# Functions ####
+# Simple Functions ####
 kelvin <- function(x) x+273.15
 find_index <- function(x,y) y <- which(y == x)
 filter_data <- function(data.df) {
-  
   data.df <- data.df %>%
-      filter(Species != "Styela plicata")
-  
+      dplyr::filter(Species != "Styela plicata")
   data.df$EstMethod_Metric <- tolower(data.df$EstMethod_Metric)
   data.df <- dplyr::filter(data.df, !Method == "unknown", !EstMethod_Metric == "unknown")
   ## Keep only oxygen consumption methods
@@ -27,7 +25,7 @@ filter_data <- function(data.df) {
   return(data.df)
 }
   
-  
+# Make a dataframe for plotting group-level estimates ####  
 make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   
   group_index <- which(ParentChild_gz$ChildTaxon==level)
@@ -49,6 +47,7 @@ make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   return(Est)
 }
 
+# Function to make a species-level dataframe of estimates ####
 make_species_df <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   
   group_index <- which(ParentChild_gz$ChildTaxon==level)
@@ -68,6 +67,7 @@ make_species_df <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
   return(Est)
 }
 
+# Function for plotting estimates by specified group ####
 plotest <- function(dataest, trait, groupname, xmin, xmax) {
   trait <- enquo(trait)
   groupname <- enquo(groupname)
@@ -172,7 +172,7 @@ load_data <- function() {
   
   # remove data with missing body size
   all.dat <- all.dat %>%
-    filter(!is.na(W))
+    dplyr::filter(!is.na(W))
 
   # change name of incertae sedis orders to one name
   tmp.index <- which(all.dat$Order == "Eupercaria incertae sedis")
@@ -185,151 +185,7 @@ load_data <- function() {
   return(all.dat)
 }
 
-# Function to simulate taxa within each taxonomic group ####
 
-sim_taxa <- function(obj, ParentChild_gz) {
-  ## Load mcmc output ####
-  sims <- readRDS(file = "analysis/mcmcoutput.RDS")
-  
-  ## extract mcmc output ####
-  alpha_sim <- rstan::extract(sims, "alpha_j")$alpha_j
-  beta_gj_sim <- rstan::extract(sims, "beta_gj")$beta_gj
-  lambda_sim<- exp(rstan::extract(sims, "log_lambda")$log_lambda)
-  L_z_sim <- rstan::extract(sims, "L_z")$L_z
-  beta_method <- rstan::extract(sims, "beta_method")$beta_method
-  ## setup simulation ####
-  parnames <- names(obj$env$last.par.best)
-  n.sims <- nrow(alpha_sim)
-  ### get number of class, order, family and species ####
-  class_index <-  which(ParentChild_gz$ChildTaxon == 1)
-  order_index <-  which(ParentChild_gz$ChildTaxon == 2)
-  family_index <-  which(ParentChild_gz$ChildTaxon == 3)
-  genera_index <- which(ParentChild_gz$ChildTaxon == 4)
-  species_index <- which(ParentChild_gz$ChildTaxon == 5)
-  n_gcj <- length(class_index)
-  n_goj <- length(order_index)
-  n_gfj <- length(family_index)
-  n_ggj <- length(genera_index)
-  n_gj <- length(species_index)
-  nbeta <- ncol(beta_gj_sim)
-  n_j <- 3 # number of traits
-  allgroups <- c("class", "order", "family", "genera", "species")
-  ngroups_array <- c(n_gcj, n_goj, n_gfj, n_ggj)
-  nreps <-  sum(ngroups_array) + n_gj
-  nlevels <- max(ParentChild_gz$ChildTaxon) 
-  beta_sim_list <- list()
-  Groups <- gsub(".*_","",ParentChild_gz$ChildName)
-  # Iterate through each mcmc iteration
-  
-  for (sim in 1:n.sims) {
-    #### Extract the "sim"th MCMC simulation
-   
-    alpha_j_random <- alpha_sim[sim, ]
-    beta_gj_random <- beta_gj_sim[sim, ]
-    beta_gj_random_matrix <- matrix(beta_gj_random, ncol = 3, byrow = F)
-    L_z_random <- L_z_sim[sim,]
-    L_z_random[1] <- exp(L_z_random[1]) # exponentiate the first to deal with log transformation
-    lambda_random <- lambda_sim[sim,]
-    beta_method_random <- beta_method[sim]
-    
-    # Place in single matrix with mean trait values as rows, including groupname as a fourth column ####
-    # This code sets logV assuming method = SMR
-    group_sims <- tibble(
-      logV = beta_gj_random_matrix[,1] + beta_method_random,
-      n = beta_gj_random_matrix[,2],
-      Eo = beta_gj_random_matrix[,3],
-      Group = Groups,
-      level = c(rep(1, n_gcj), rep(2, n_goj), rep(3, n_gfj), rep(4, n_ggj), rep(5, n_gj))
-    )
-  
-    # Make covar matrix
-    L <- matrix(0, nrow = n_j, ncol = n_j)
-    #### Fill iin Cholesky Matrix ####
-    Count = 1
-    D <- 0.00001
-    Count = 1;
-    for(r in 1:3){
-      for(c in 1:3){
-        if(r == c) {
-          L[r,c] = L_z_random[Count]
-          Count<- Count + 1
-        }
-        if(r>c){
-          L[r,c] = L_z_random[Count]
-          Count <- Count + 1
-        }
-      }
-    }
-    
-    sigma <- L %*% t(L) + D
-    
-    ### using random draw for taxonomic level mean simulate value for a random species for each known taxa at that level
-    beta_sim_i <- list()
-    # loop through all levels but omiting species
-    for (l in 1:(nlevels - 1) )  {
-      level_sims <- dplyr::filter(group_sims, level == l)
-      lambdasum <- sum(lambda_random[l:(nlevels - 1)])
-      tmpsims <- level_sims[,1:3] + rmvnorm(n =  ngroups_array[l],
-                                            mean = rep(0, 3),
-                                            sigma = lambdasum * sigma) 
-      tmp_df <- tibble(logV =tmpsims[,1],
-                       n = tmpsims[,2],
-                       Eo = tmpsims[,3],
-                       Group = dplyr::filter(group_sims, level==l)$Group,
-                       level = l)
-      beta_sim_i[[l]] <- tmp_df
-    }
-    
-    # add species - level posterior 
-    beta_sim_i[[nlevels]] <- dplyr::filter(group_sims, level == nlevels)
-    
-    
-    # add out of sample classes
-    lambdasum <- sum(lambda_random) + 1
-    tmpsims <- alpha_j_random + rmvnorm(n =  1,
-                                        mean = rep(0, 3),
-                                        sigma = lambdasum * sigma) 
-    tmp_df <- tibble(logV =tmpsims[,1],
-                     n = tmpsims[,2],
-                     Eo = tmpsims[,3],
-                     Group = NA,
-                     level = 0)
-    beta_sim_i[[nlevels + 1]] <- tmp_df
-    # combine all simulated taxa into a single tibble
-    beta_sim_list[[sim]] <- do.call("rbind",beta_sim_i)
-  }
-  # combine all "sim" results into a single tibble
-  sim_betas <- do.call("rbind", beta_sim_list)
-  return(sim_betas)
-}
-
-# Function to extract predictions
-  
-  lookup_taxa <- function(taxa.name) {
-    all.dat <- load_data()
-    sim_beta <- readRDS("analysis/taxa_sims.RDS")
-    ltaxa.name <- tolower(taxa.name)
-    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
-    sim_beta$Group <- tolower(sim_beta$Group)
-    if(lookup.taxa) {
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, Group == ltaxa.name)
-    }
-    if(!lookup.taxa) {
-      options(warn = -1)
-      cat("Taxonomic group not in sample, showing distribution for unknown Class \n")
-      cat("Run print.order(),  print.family() or print.genera() to see list \n of taxonomic groups")
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, is.na(Group))
-    }
-    
-    # retrieve posterior medians
-    logV.taxa <- sims$logV
-    n.taxa <- sims$n
-    eo.taxa <- sims$Eo
-    return_obj <- list(logV = logV.taxa, n = n.taxa, Eo = eo.taxa)
-    return(return_obj)
-  }
   
   # Function to make residual plots ####
   plot_diagnostics <- function(model, Pcrit, inv.temp, W, SpeciesEst, method_mat=NULL, beta_method = NULL,
@@ -387,22 +243,33 @@ sim_taxa <- function(obj, ParentChild_gz) {
   }
 
   
-  summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
+# Summarize model estimates for taxonomic groups ####  
+summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
     
+    if (taxa.list[1] == "Family") baselevel = 0
     if (taxa.list[1] == "Order") baselevel =1
     if (taxa.list[1] == "Class") baselevel =2
-    if (taxa.list[1] == "Family") baselevel = 0
+    if (taxa.list[1] == "Phylum") baselevel =3
     
+    ## Phylum ####
+    if (taxa.list[1] == "Phylum") {
+      PhylumEst <- make_df_plot(level = 1,
+                               beta_mle,
+                               beta_se,
+                               ParentChild_gz,
+                               groups = taxa.list)
+      PhylumEst <- merge(PhylumEst, phylum_summary)
+    }
     ## Class ####
-    if (taxa.list[1] == "Class") {
-      ClassEst <- make_df_plot(level = 1,
+    if (taxa.list[1] %in% c("Phylum", "Class")) {
+      ClassEst <- make_df_plot(level = 2,
                   beta_mle,
                   beta_se,
                   ParentChild_gz,
                   groups = taxa.list)
       ClassEst <- merge(ClassEst, class_summary)
     }
-    if (taxa.list[1] %in% c("Order", "Class") ) {
+    if (taxa.list[1] %in% c("Order", "Class", "Phylum") ) {
       ## By Order #####
       OrderEst <- make_df_plot(level = baselevel, 
                                beta_mle,
@@ -412,7 +279,7 @@ sim_taxa <- function(obj, ParentChild_gz) {
       
       OrderEst <- merge(OrderEst, order_summary)
     }
-    if (taxa.list[1] %in% c("Family","Order", "Class")) {
+    if (taxa.list[1] %in% c("Family","Order", "Class", "Phylum")) {
       ## By Family ####
       FamilyEst <- make_df_plot(level = baselevel + 1, 
                                 beta_mle,
@@ -432,10 +299,9 @@ sim_taxa <- function(obj, ParentChild_gz) {
     
     output <- list(FamilyEst = FamilyEst,
                    SpeciesEst = SpeciesEst)
-    if (taxa.list[1] == "Class") output$ClassEst = ClassEst
-      
-    
-    if (taxa.list[1] %in% c("Class", "Order")) output$OrderEst = OrderEst
+    if (taxa.list[1] == "Phylum") output$PhylumEst = PhylumEst
+    if (taxa.list[1] %in% c("Phylum", "Class") ) output$ClassEst = ClassEst
+    if (taxa.list[1] %in% c("Phylum", "Class", "Order") ) output$OrderEst = OrderEst
     return(output)
   }
   
@@ -504,7 +370,7 @@ sim_taxa <- function(obj, ParentChild_gz) {
   filter_dat <- function(dat) {
     rem_styela <- T
     if (rem_styela) dat <- dat %>%
-        filter(Species != "Styela plicata")
+        dplyr::filter(Species != "Styela plicata")
     rem_unknown <- T
     dat$EstMethod_Metric <- tolower(dat$EstMethod_Metric)
     if (rem_unknown) dat <- dplyr::filter(dat, !Method == "unknown", !EstMethod_Metric == "unknown")
@@ -524,163 +390,8 @@ sim_taxa <- function(obj, ParentChild_gz) {
                panel.grid.minor = element_blank(),
                strip.background = element_blank())
   
-  # Functions for calculating credibility interval
-  # function to return the probability in the tails below a theshold density
-  getprob <- function(dens, x) {
-    smooth <- bkde (x)
-    deltax <- diff(smooth$x)[1]
-    # turn into probability
-    probs <- smooth$y * deltax
-    index <- which(smooth$y <dens)
-    return(sum(probs[index]))
-  }
-  # function to get the difference between tail probability and target probability
-  fit_dens <- function(dens, x, p) {
-    pstar <- getprob(dens, x)
-    target_p <- 1 - p
-    return(target_p - pstar)
-  }
-  # master function to solve for the density that produces a tail probability equal
-  # to target, and to give the limits of that range (the inner p percentile interval)
-  get_x_range <- function(x, p) {
-    dens <- uniroot(f = fit_dens, interval = c(0.01, 1), x = x, p = p)
-    smooth <- bkde (x)
-    index <- which(smooth$y >=dens$root)
-    xbounds = c(min(smooth$x[index]), max(smooth$x[index]))
-    return(xbounds)
-  }
   
   
-  
-  lookup_taxa <- function(taxa.name, ylim) {
-    all.dat <- load_data()
-    # do the usual filtering of data
-    all.dat <- filter_dat(all.dat)
-    wref <- 5
-    tref <- 15
-    kb <-  8.617333262145E-5
-    sim_beta <- readRDS("analysis/taxa_sims.RDS")
-    ltaxa.name <- tolower(taxa.name)
-    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
-    
-    if(lookup.taxa) {
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, Group == taxa.name)
-      if (sims$level[1] == 1) taxa_dat <- dplyr::filter(all.dat, tolower(Class) == ltaxa.name)
-      if (sims$level[1] == 2) taxa_dat <- dplyr::filter(all.dat, tolower(Order) == ltaxa.name)
-      if (sims$level[1] == 3) taxa_dat <- dplyr::filter(all.dat, tolower(Family) == ltaxa.name)
-      
-      
-      Wmed <- median(all.dat$W/ wref)
-      
-      # calculate Pcrit for 10degrees
-      t_est1 <- 8
-      inv.temp <- (1 / kb) * (1 / kelvin(t_est1) - 1 / kelvin(tref) )
-      pcrit_1 <- sims$logV - sims$n * log(Wmed) - sims$Eo * inv.temp
-      
-      # calculate Pcrit for 20 degrees
-      t_est2 <- 20
-      inv.temp <- (1 / kb) * (1 / kelvin(t_est2) - 1 / kelvin(tref) )
-      pcrit_2 <- sims$logV - sims$n * log(Wmed) - sims$Eo * inv.temp
-      
-      # put in a tibble
-      pcrit_df <- tibble(pcrit = c(pcrit_1, pcrit_2),
-                         temp = c(rep(t_est1, times = length(pcrit_1)),
-                                  rep(t_est2, times = length(pcrit_2))
-                         )
-      )
-      # Print SD of simulated species
-      print(c( sd ( exp ( pcrit_1 ) ), sd( exp ( pcrit_2 ) ) ) )
-      
-      # calculate posterior prediction interval defined so that each tail has the same density
-      # and print out results
-      x_1_range <- get_x_range(x = exp(pcrit_1), p = 0.9)
-      x_2_range <- get_x_range(x = exp(pcrit_2), p = 0.9)
-      cat(" 10 degrees: ", x_1_range[1], " - ", x_1_range[2], "\n")
-      cat(" 20 degrees: ", x_2_range[1], " - ", x_2_range[2] )
-      
-      # Add taxonomic name to upper right hand column
-      grob <- grobTree(textGrob(taxa.name, x=0.9,  y=0.95, hjust=1,
-                                gp=gpar(fontsize=18)))
-      
-      p <- ggplot(data = pcrit_df, aes(x = exp(pcrit), fill = as.factor(temp))) +
-        geom_density(alpha = 0.75) + 
-        ylab("Density") + 
-        xlab(bquote(p[crit])) + 
-        scale_fill_manual(values = c("#67a9cf", "#ef8a62")) +
-        theme(legend.position = "none") +
-        scale_x_continuous(expand = c(0,0), limits = c(0, 17) ) + 
-        scale_y_continuous(expand = c(0,0), limits = ylim) +
-        annotation_custom(grob)
-      
-      return(p)
-    }
-    
-    
-  } 
-  
-  
-  lookup_taxa_t <- function(taxa.name, t.range, w.2.use) {
-    
-    all.dat <- load_data()
-    # remove data as needed
-    all.dat <- filter_data(all.dat)
-    
-    wref <- 5
-    tref <- 15
-    kb <-  8.617333262145E-5
-    sim_beta <- readRDS("analysis/taxa_sims.RDS")
-    ltaxa.name <- tolower(taxa.name)
-    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
-    
-    if(lookup.taxa) {
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, Group == taxa.name)
-      if (sims$level[1] == 1) taxa_dat <- dplyr::filter(all.dat, tolower(Class) == ltaxa.name)
-      if (sims$level[1] == 2) taxa_dat <- dplyr::filter(all.dat, tolower(Order) == ltaxa.name)
-      if (sims$level[1] == 3) taxa_dat <- dplyr::filter(all.dat, tolower(Family) == ltaxa.name)
-      if (sims$level[1] == 4) taxa_dat <- dplyr::filter(all.dat, tolower(Genus) == ltaxa.name)
-      if (sims$level[1] == 5) taxa_dat <- dplyr::filter(all.dat, tolower(Species) == ltaxa.name)
-    }
-      
-      Wmed <- median(w.2.use/ wref)
-      
-      pcrit_df <- tibble(Temp = NA, 
-                         Pcritlower90 = NA,
-                         Pcritupper90= NA,
-                         Pcritlower50 = NA,
-                         Pcritupper50= NA)
-      
-      for (i in seq_along(t.range)) {
-      # calculate Pcrit for given temperature
-      inv.temp <- (1 / kb) * (1 / kelvin(t.range[i]) - 1 / kelvin(tref) )
-      pcrit <- sims$logV - sims$n * log(Wmed) - sims$Eo * inv.temp
-      pcrit_90 <- get_x_range(x = exp(pcrit), p = 0.9)
-      pcrit_50 = get_x_range(x = exp(pcrit), p = 0.5)
-      pcrit_df <- pcrit_df %>% add_row(Temp = t.range[i],
-                            Pcritlower90 = pcrit_90[1], 
-                            Pcritupper90 = pcrit_90[2],
-                            Pcritlower50 = pcrit_50[1],
-                            Pcritupper50 = pcrit_50[2]
-                           )
-      
-      }
-      # delete placeholder NA row
-      pcrit_df <- na.omit(pcrit_df)
-      # smooth lower and upper bounnds
-      lower90mod = gam(Pcritlower90~ s(Temp), data = pcrit_df)
-      pcrit_df$lower90s = predict.gam(lower90mod, data = pcrit_df)
-      upper90mod = gam(Pcritupper90~ s(Temp), data = pcrit_df)
-      pcrit_df$upper90s = predict.gam(upper90mod, data = pcrit_df)
-      
-      lower50mod = gam(Pcritlower50~ s(Temp), data = pcrit_df)
-      pcrit_df$lower50s = predict.gam(lower50mod, data = pcrit_df)
-      upper50mod = gam(Pcritupper50~ s(Temp), data = pcrit_df)
-      pcrit_df$upper50s = predict.gam(upper50mod, data = pcrit_df)
-      
-      
-      return(pcrit_df)
-  } 
   
   # calc o2 solubility, relies on o2 in umol/kg
   gsw_O2sol_SP_pt <- function(sal,pt) {
@@ -705,57 +416,584 @@ sim_taxa <- function(obj, ParentChild_gz) {
     return(O2sol)
   }
   
-  
-  calc_p_po2 <- function(temp, po2, taxa.name,  w) {
-    # function to calculate the proportion of MCMC simulations with pcrit less than po2,
-    # given a temperature and po2
+  # Calculate the probability that an input value po2 is greater than pcrit ####
+  calc_p_po2 <- function(po2, temp, w, pcrit_type = "smr", betas, var_covar) {
     
+    # Setup fixed values
     wref <- 5
     tref <- 15
     kb <-  8.617333262145E-5
-    sim_beta <- readRDS("analysis/taxa_sims.RDS")
-    ltaxa.name <- tolower(taxa.name)
-    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
+    # Transform w and temperature
+    inv_temperature <- (1/ kb) * (1 / kelvin(temp) - 1 / kelvin(tref) )
+    logw <- log(w / wref )
+    # calculate prediction x's
+    if(pcrit_type == "smr") x_predict <- as.vector(c(1, -logw, -inv_temperature, 1))
+    if(!pcrit_type == "smr") x_predict <- c(1, -logw, -inv_temperature, 0)
+    # generate prediction and standard error
+    log_pcrit_predict <- x_predict %*% betas
+    log_pcrit_se <-as.numeric(sqrt( t(x_predict) %*% var_covar %*% x_predict ))
+    # calculate probability that po2 exceeds pcrit
+    p_po2_exceeds_pcrit <- pnorm(q = log(po2), mean = log_pcrit_predict, sd = log_pcrit_se)
     
-    if(lookup.taxa) {
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, Group == taxa.name)
-    }
-    
-      # calculate Pcrit for given temperature
-      inv.temp <- (1 / kb) * (1 / kelvin(temp) - 1 / kelvin(tref) )
-      pcrit <- exp(sims$logV - sims$n * log(w/wref) - sims$Eo * inv.temp)
-      # get the proportion of mcmc sims with pcrit less than the po2
-      p_po2_exceeds_pcrit <- length(which(pcrit < po2)) / nrow(sims)
-      return(p_po2_exceeds_pcrit)
-  }
-
-  calc_many_p_po2 <- function(temp, po2, taxa.name,  w) {
-    # function to calculate the proportion of MCMC simulations with pcrit less than po2,
-    # given an array of temperature and po2
-    
-    wref <- 5
-    tref <- 15
-    kb <-  8.617333262145E-5
-    sim_beta <- readRDS("analysis/taxa_sims.RDS")
-    ltaxa.name <- tolower(taxa.name)
-    lookup.taxa <- ltaxa.name %in% tolower(sim_beta$Group)
-    
-    if(lookup.taxa) {
-      options(warn = -1)
-      sims <- dplyr::filter(sim_beta, Group == taxa.name)
-  
-    }
-    ndata <- length(temp)
-    p_po2_exceeds_pcrit <- vector(length = ndata)
-    for (i in 1:ndata) {
-    # calculate Pcrit for given temperature
-    inv.temp <- (1 / kb) * (1 / kelvin(temp[i]) - 1 / kelvin(tref) )
-    pcrit <- exp(sims$logV - sims$n * log(w/wref) - sims$Eo * inv.temp)
-    # get the proportion of mcmc sims with pcrit less than the po2
-    p_po2_exceeds_pcrit[i] <- length(which(pcrit < po2[i])) / nrow(sims)
-    }
     return(p_po2_exceeds_pcrit)
   }
   
+  ## Functions for model advancement using blank taxa names for
+  # out of sample prediction
+  
+  # Augment dataframe with blank taxa ####
+  augment_taxa <- function(all.dat) {
+    ## Create "empty" species for each genera, each family, each order, each class, and one
+    ## out of sample
+    
+    # 1. Blank species per Genus
+    genus_placeholders <- all.dat %>%
+      distinct(Phylum, Class, Order, Family, Genus) %>%
+      mutate(Species = 'sp' ,
+             source = "genus_placeholder")
+    
+    
+    # 2. Blank species + genus per Family
+    family_placeholders <- all.dat %>%
+      distinct(Phylum, Class, Order, Family) %>%
+      mutate(Genus = "blankgenusinfamily",
+             Species = "blankgenusinfamily sp",
+             source = "family_placeholder")
+    
+    # 3. Blank species + genus + family per Order
+    order_placeholders <- all.dat %>%
+      distinct(Phylum, Class, Order) %>%
+      mutate(Family = "blankfamilyinorder",
+             Genus = "blankgenusinorder",
+             Species = "blankgenusinorder sp",
+             source = "order_placeholder")
+    
+    # 4. Blank species + genus + family + order per Class
+    class_placeholders <- all.dat %>%
+      distinct(Phylum, Class) %>%
+      mutate(Order = "blankorderinclass",
+             Family = "blankfamilyinclass",
+             Genus = "blankgenusinclass",
+             Species = "blankgenusinclass sp",
+             source = "class_placeholder")
+    
+    phylum_placeholders <- all.dat %>%
+      distinct(Phylum) %>%
+      mutate(Class = "blankclassinphylum",
+             Order = "blankorderinphylum",
+             Family = "blankfamilyinphylum",
+             Genus = "blankgenusinphylum",
+             Species = "blankgenusinphylum sp",
+             source = "class_placeholder")
+    
+    # Combine all placeholders
+    all_placeholders <- bind_rows(genus_placeholders,
+                                  family_placeholders,
+                                  order_placeholders,
+                                  class_placeholders,
+                                  phylum_placeholders)
+    
+    # Add NA to other columns  Pcrit, Temp, W, and EstMethod_Metrix
+    all_placeholders <- all_placeholders %>%
+      mutate(Temp = NA_real_, inv.temp = NA_real_, W = NA_real_, EstMethod_Metric = NA_character_, Pcrit = NA_real_)
+    
+    # Combine with  original data 
+    augmented_df <- bind_rows(all.dat %>% mutate(source = "real_data"),
+                              all_placeholders)
+    return(augmented_df)
+  }
+  
+  # Create new ParentChild matrix for reduced taxonomic structure ####
+  make_taxa_tree_augmented <- function(augmented_df, taxa.list) {
+    # pull only those columns in taxa.list
+    Z_ik_main <- dplyr::select(augmented_df, all_of(taxa.list))
+    # get only unique taxa
+    Z_ik <- unique(Z_ik_main, MARGIN = 1)
+    # set up ParentChild_gz matrix
+    ParentChild_gz = NULL
+    # 1st column: child taxon name
+    # 2nd column: parent taxon name
+    # 3rd column: parent row-number in ParentChild_gz
+    # 4th column: Taxon level
+    # Loop through all unique taxa
+    for (colI in 1:ncol(Z_ik)) {
+      Taxa_Names = apply(Z_ik[, 1:colI, drop = FALSE],
+                         MARGIN = 1,
+                         FUN = paste,
+                         collapse = "_")
+      Unique_Taxa = unique(Taxa_Names)
+      for (uniqueI in 1:length(Unique_Taxa)) {
+        Which = which(Taxa_Names == Unique_Taxa[uniqueI])
+        if (colI == 1) {
+          ParentChild_gz = rbind(ParentChild_gz, c(Unique_Taxa[uniqueI], NA, NA, colI))
+        } else{
+          if (length(unique(Z_ik[Which, colI - 1])) > 1)
+            stop("Taxa has multiple parents")
+          ChildName = Unique_Taxa[uniqueI]
+          ParentName = paste(rev(rev(strsplit(
+            ChildName, "_"
+          )[[1]])[-1]), collapse = "_")
+          ParentChild_gz = rbind(ParentChild_gz, c(
+            ChildName,
+            ParentName,
+            match(ParentName, ParentChild_gz[, 1]),
+            colI
+          ))
+        }
+      }
+    }
+    
+    
+    
+    # Relabel
+    ParentChild_gz = data.frame(ParentChild_gz)
+    colnames(ParentChild_gz) = c("ChildName", "ParentName", "ParentRowNumber", "ChildTaxon")
+    ParentChild_gz[, 'ParentRowNumber'] = as.numeric(as.character(ParentChild_gz[, 'ParentRowNumber']))
+    ParentChild_gz[, 'ChildTaxon'] = as.numeric(as.character(ParentChild_gz[, 'ChildTaxon']))
+    PC_gz <- as.matrix(ParentChild_gz[, c('ParentRowNumber', 'ChildTaxon')]) - 1
+    # Identify location for every observation
+    Taxa_Names = apply(Z_ik,
+                       MARGIN = 1,
+                       FUN = paste,
+                       collapse = "_")
+    g_i = match(Taxa_Names, ParentChild_gz[, 'ChildName'])
+    n_k = ncol(Z_ik)
+    n_j = 3 # three traits
+    n_g = nrow(ParentChild_gz)
+    n_i <- length(g_i)
+    
+    # Create index of data to Parent - Child ###
+    #Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
+    Taxa_Names_dat <-  apply(Z_ik_main,
+                             MARGIN = 1,
+                             FUN = paste,
+                             collapse = "_")
+    g_i_dat = match(Taxa_Names_dat, ParentChild_gz[, 'ChildName'])
+    g_i_i <- sapply(FUN = find_index, X = g_i_dat, y = g_i)
+    
+    # Create index of species to Parent  - Child, but only for those
+    # that have data (chatGPT code assistance, confirmed through testing)
+    # Step 1: Identify species-level nodes in the parent-child graph
+    species_rows <- which(PC_gz[, 2] == max(PC_gz[, 2]))
+    
+    # Step 2: Identify rows from real data
+    real_rows <- which(!is.na(augmented_df$Pcrit == "real_data"))
+    
+    # Step 3: Get taxa names from real data
+    real_taxa_names <- apply(Z_ik_main[real_rows, , drop = FALSE], 1, paste, collapse = "_")
+    
+    # Step 4: Match these to species-level taxon names in the parent-child table
+    species_names <- ParentChild_gz$ChildName[species_rows]
+    
+    # Step 5: Filter only those species-level entries that are in the real data
+    spc_in_PC_gz <- species_rows[species_names %in% real_taxa_names]
+    
+    
+    return(
+      list(
+        ParentChild_gz = ParentChild_gz,
+        PC_gz = PC_gz,
+        g_i = g_i,
+        g_i_i = g_i_i,
+        n_k = n_k,
+        n_j = n_j,
+        n_g = n_g,
+        n_i = n_i,
+        spc_in_PC_gz = spc_in_PC_gz
+      )
+    )
+  }
+  
+  # lookup lowest taxonomic group represntation ####
+  lookup_taxonomic_group <- function(taxa.name, all.dat, ParentChild_gz) {
+    # lookup taxa in sealifebase
+    # look to see if species is in database
+    taxa_in_data <- taxa.name %in% all.dat$Species
+    # do this if taxa is within the database 'alldat'
+    if (taxa_in_data) {
+      # lookup row
+      row_in_PC <- grep(x = ParentChild_gz$ChildName, pattern = taxa.name)
+      return(row_in_PC)
+    }
+    
+    # do this if taxa is not in data (lookup lowest group represented)
+    if (!taxa_in_data) {
+      # lookup full taxonomy of taxa
+      worms_lookup <- try(as.data.frame(wm_records_name(taxa.name)), silent = T)
+      if (class(worms_lookup) == "try-error") {
+        stop("taxa name not found in WoRMS database.  Check spelling")
+        
+      } else {
+        # reduce df to include only Phylum, Class, etc. Remove unaccepted taxonomy
+        taxa_lookup <- as.data.frame(worms_lookup) %>%
+          filter(status == "accepted") %>%
+          select(phylum, class, order, family, genus, scientificname)
+        
+        # Identify the lowest taxonomic order that is represented in the df all.dat
+        taxa_levels <- c("phylum", "class", "order", "family", "genus")
+        
+        # make taxa_df from all.dat that only has taxonomic information
+        taxa_df <- all.dat %>%
+          dplyr::select(Phylum, Class, Order, Family, Genus)
+        colnames(taxa_df) = tolower(colnames(taxa_df))
+        
+        
+        # Start from most specific and work upward to find lowest shared rank
+        lowest_shared_rank <- NULL
+        lowest_shared_value <- NULL
+        
+        for (i in seq_along(rev(taxa_levels))) {
+          level <- rev(taxa_levels)[i]
+          value <- taxa_lookup[[level]]
+          
+          if (!is.null(value) && level %in% colnames(taxa_df)) {
+            if (value %in% taxa_df[[level]]) {
+              lowest_shared_rank <- level
+              lowest_shared_value <- value
+              break
+            }
+          }
+        }
+        
+        # If match was found, construct the placeholder name accordingly
+        if (!is.null(lowest_shared_rank)) {
+          # Create the placeholder row string based on the level
+          ranks_to_use <- taxa_levels[1:which(taxa_levels == lowest_shared_rank)]
+          base_taxa <- sapply(ranks_to_use, function(r)
+            taxa_lookup[[r]])
+          
+          # Add placeholder at appropriate level
+          placeholder_suffix <- list(
+            genus = "sp",
+            family = "blankgenusinfamily_blankgenusinfamily sp",
+            order = "blankfamilyinorder_blankgenusinorder_blankgenusinorder sp",
+            class = "blankorderinclass_blankfamilyinclass_blankgenusinclass_blankgenusinclass sp",
+            phylum = "blankclassinplyum_blankorderinphylum_blankfamilyinphylum_blankgenusinphylum_blankgenusinphylum sp"
+          )
+          
+          placeholder <- placeholder_suffix[[lowest_shared_rank]]
+          
+          # Combine taxon string
+          collapsed_taxon <- paste(c(base_taxa, placeholder), collapse = "_")
+          
+          # Lookup row in ParentChild_gz
+          row_in_PC <- which(ParentChild_gz$ChildName == collapsed_taxon)
+          
+          if (length(row_in_PC) > 0) {
+            cat( "using estimate from the following taxa: \n" )
+            cat( collapsed_taxon )
+            return(row_in_PC)
+          } else {
+            message("no matching taxonomic rank found in data")
+            return(NULL)
+          }
+        }
+      }
+    }
+  }
+  # Estimate pcrit for taxa ####
+  estimate_taxa <- function(taxa.name, 
+                            w ,
+                            temperature,
+                            method = "smr",
+                            rep,
+                            ParentChild_gz) {
+    
+    # first load taxa
+    all.dat <- load_data()
+    all.dat <- filter_data(all.dat)
+    
+    # lookup rownumber for listed taxa within ParentChild matrix
+    lookup_row_number <- lookup_taxonomic_group(taxa.name = taxa.name,
+                                                all.dat = all.dat,
+                                                ParentChild_gz = ParentChild_gz)
+    
+    # Extract fitted parameters from fitted object
+    re <- summary(rep, "random")
+    fixef <- summary(rep, "fixed")
+    names <- rownames(rep)
+    n_j <- 3 # number of traits
+    n_g <- nrow(ParentChild_gz) # number of taxagroups
+    
+    beta_mle <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 1],
+                       nrow = n_g,
+                       ncol = 3,
+                       byrow = F)
+    
+    beta_se <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 2],
+                      nrow = n_g,
+                      ncol = 3,
+                      byrow = F)
+    
+    # Extract taxonomic-specific values
+    beta_mle_taxa <- beta_mle[lookup_row_number, ]
+    beta_se_taxa <- beta_se[lookup_row_number, ]
+    
+    
+    # Lookup beta_method
+    beta_method_index <- which(names == "beta_method")
+    beta_method <- fixef["beta_method", 1]
+    beta_method_se <- fixef["beta_method", 2]
+    
+    # Do calculations to approximate the variance- covariance matrix
+    # I assume no covariance between traits and beta_method
+    Sigma_hat <- calc_sigma(model.fit$rep)
+    scaling <- beta_se_taxa / sqrt(diag(Sigma_hat) )
+    V_approx_beta_j <- diag(scaling) %*% Sigma_hat %*% diag(scaling)
+    # now add 0s for beta_method
+    V_approx <- matrix(0, nrow = 4, ncol = 4)
+    V_approx[1:3, 1:3] <- V_approx_beta_j
+    V_approx[4, 4] <- beta_method_se^2
+    
+    # some placeholder settings
+    wref <- 5
+    tref <- 15
+    kb <-  8.617333262145E-5
+    
+    betas <- as.vector(c(beta_mle_taxa, beta_method))
+    logw <- log(w / wref)
+    inv.temp <- 1 / kb * (1 / kelvin(temperature) - 1 / kelvin(tref))
+    
+    # Set up x_predict
+    if (method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 1))
+    if (!method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 0))
+    
+    # calculate prediction and SE of prediction
+    log_pcrit_predict <-  x_predict %*% betas
+    log_pcrit_se <- as.numeric(sqrt(t(x_predict) %*% V_approx %*% x_predict))
+    
+    # format results nicely
+    parameter_estimates <- cbind(c(beta_mle_taxa, beta_method),
+                                 c(beta_se_taxa, beta_method_se))
+    rownames(parameter_estimates) <- c("log(V)", "n", "Eo", "beta_method")
+    colnames(parameter_estimates) <- c("Estimate", "SE")
+    
+    log_pcrit_estimate <- c(logpcrit = log_pcrit_predict, se = log_pcrit_se)
+    return(list(parameters = parameter_estimates, log_pcrit = log_pcrit_estimate, var_covar = V_approx))
+  }
+  
+  # Estimate pcrit for taxa using full covariance ####
+  estimate_taxa_full <- function(taxa.name, 
+                            w ,
+                            temperature,
+                            method = "smr",
+                            rep,
+                            ParentChild_gz) {
+    
+    # first load taxa
+    all.dat <- load_data()
+    all.dat <- filter_data(all.dat)
+    
+    # lookup rownumber for listed taxa within ParentChild matrix
+    lookup_row_number <- lookup_taxonomic_group(taxa.name = taxa.name,
+                                                all.dat = all.dat,
+                                                ParentChild_gz = ParentChild_gz)
+    
+    # Extract fitted parameters from fitted object
+    re <- summary(rep, "random")
+    fixef <- summary(rep, "fixed")
+    names <- rownames(summary(rep, "all"))
+    
+    n_j <- 3 # number of traits
+    n_g <- nrow(ParentChild_gz) # number of taxagroups
+    
+    beta_mle <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 1],
+                       nrow = n_g,
+                       ncol = 3,
+                       byrow = F)
+    
+    beta_se <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 2],
+                      nrow = n_g,
+                      ncol = 3,
+                      byrow = F)
+    
+    # get all rownumbers for beta_gj indices
+    beta_gj_positions <- which(names == "beta_gj")
+    all_beta_gj_matrix_indices <- matrix(beta_gj_positions,
+                                         nrow = n_g,
+                                         ncol = n_j,
+                                         byrow = FALSE)
+    
+    # Extract taxonomic-specific values
+    beta_mle_taxa <- beta_mle[lookup_row_number, ]
+    beta_se_taxa <- beta_se[lookup_row_number, ]
+    
+    
+    # Lookup beta_method
+    beta_method_index <- which(names == "beta_method")
+    beta_method <- fixef["beta_method", 1]
+    beta_method_se <- fixef["beta_method", 2]
+    
+    # Do calculations to approximate the variance- covariance matrix
+    # I assume no covariance between traits and beta_method
+    
+    # get sparse precision matrix
+    J <- rep$jointPrecision
+    # convert to var-covar
+    
+    V_joint <- solve(J)
+    
+    beta_gj_indices <- all_beta_gj_matrix_indices[lookup_row_number,]
+    V <- V_joint[c(beta_gj_indices, beta_method_index), c(beta_gj_indices, beta_method_index)]
+    
+    
+    # some placeholder settings
+    wref <- 5
+    tref <- 15
+    kb <-  8.617333262145E-5
+    
+    betas <- as.vector(c(beta_mle_taxa, beta_method))
+    logw <- log(w / wref)
+    inv.temp <- 1 / kb * (1 / kelvin(temperature) - 1 / kelvin(tref))
+    
+    # Set up x_predict
+    if (method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 1))
+    if (!method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 0))
+    
+    # calculate prediction and SE of prediction
+    log_pcrit_predict <-  x_predict %*% betas
+    log_pcrit_se <- as.numeric(sqrt(t(x_predict) %*% V %*% x_predict))
+    
+    # format results nicely
+    parameter_estimates <- cbind(c(beta_mle_taxa, beta_method),
+                                 c(beta_se_taxa, beta_method_se))
+    rownames(parameter_estimates) <- c("log(V)", "n", "Eo", "beta_method")
+    colnames(parameter_estimates) <- c("Estimate", "SE")
+    
+    log_pcrit_estimate <- c(logpcrit = log_pcrit_predict, se = log_pcrit_se)
+    return(list(parameters = parameter_estimates, log_pcrit = log_pcrit_estimate, var_covar = V))
+  }
+  # Fit TMB model using augmented taxa dataframe ####
+  fit_model_augmented_taxa <- function(fitnew = F) {
+    if (fitnew) {
+      library(dplyr)
+      library(MASS)
+      library(TMB)
+      library(ggplot2)
+      library(gridExtra)
+      library(readxl)
+      library(Matrix)
       
+      conflicted::conflict_prefer("select", "dplyr")
+      conflicted::conflict_prefer("filter", "dplyr")
+      
+      # Setup Code ####
+      ## load functions ####
+      source("code/helper/fit_model_funs.R")
+      
+      ## load data ####
+      all.dat <- load_data()
+      all.dat <- filter_data(all.dat)
+      augmented_df <- augment_taxa(all.dat)
+      
+      # Do all of the setup stuff on data for TMB
+      method_mat <- model.matrix( ~ EstMethod_Metric , all.dat)
+      n_methods <- ncol(method_mat) - 1
+      kb <-  8.617333262145E-5
+      tref <- 15
+      wref <- 5
+      all.dat$W <- all.dat$W / wref
+      all.dat$inv.temp <- (1 / kb) * (1 / (all.dat$Temp + 273.15) - 1 / (tref + 273.15))
+      all.dat$minuslogpo2 <- -log(all.dat$Pcrit)
+      
+      taxa.list <- c("Phylum", "Class", "Order", "Family", "Genus", "Species")
+      
+      taxa.info <- make_taxa_tree_augmented(augmented_df, taxa.list)
+      
+      ParentChild_gz <- taxa.info$ParentChild_gz
+      PC_gz <- taxa.info$PC_gz
+      g_i <- taxa.info$g_i
+      g_i_i <- taxa.info$g_i_i
+      n_k <- taxa.info$n_k
+      n_j <- taxa.info$n_j
+      n_g <- taxa.info$n_g
+      n_i <- taxa.info$n_i
+      # which rows of taxa ParentChild_gz are attached to "real" species in data
+      spc_in_PC_gz <- taxa.info$spc_in_PC_gz
+      ## Setup TMB ####
+      data <- list(
+        PC_gz = PC_gz,
+        g_i = g_i - 1,
+        invtemp = all.dat$inv.temp,
+        logW = log(all.dat$W),
+        taxa_id = g_i_i - 1,
+        minuslogpo2 = -log(all.dat$Pcrit),
+        spc_in_PCgz = spc_in_PC_gz - 1,
+        method_mat = method_mat[, -1]
+      )
+      
+      parameters = list(
+        alpha_j = c(0, 0, 0),
+        L_z = rep(1, 6),
+        log_lambda = rep(-1, length(unique(PC_gz[, 2])) - 1),
+        beta_gj = matrix(0, nrow = n_g, ncol = n_j),
+        beta_method = 0,
+        logsigma = 0
+      )
+      Random <- c("beta_gj")
+      model <- "hierarchical_mi"
+      compile(paste0("code/TMB/", model, ".cpp"))
+      dyn.load(dynlib(paste0("code/TMB/", model)))
+      
+      ## Run TUMB ####
+      obj <-
+        MakeADFun(
+          data = data,
+          parameters = parameters,
+          DLL = model,
+          random = Random,
+          silent = TRUE
+        )
+      opt <- nlminb(obj$par, obj$fn, obj$gr)
+      rep = sdreport(obj,
+                     getReportCovariance = TRUE,
+                     getJointPrecision = TRUE)
+      # save rep and ParentChild_gz in analysis/
+      saveRDS(object = list(rep = rep, ParentChild_gz = ParentChild_gz),
+              file = "analysis/model_fit_augmented.RDS")
+      return(list(rep = rep, ParentChild_gz = ParentChild_gz) )
+    }
+    if (!fitnew) {
+      # check to see if file exists in analysis subfolder
+      check.file <- file.exists("analysis/model_fit_augmented.RDS")
+      if (!check.file)
+        stop("model_fit_augmented.RDS not found. Re-run setting fitnew = TRUE")
+      if (check.file) {
+        model.fit <- readRDS("analysis/model_fit_augmented.RDS")
+        return(model.fit)
+      }
+    }
+  }
+  
+  # Calculated variance- covariance matrix ####
+  calc_sigma <- function(rep) {
+    n_j <- 3
+    fixef <- rep$par.fixed
+    L_z <- fixef[grep(names(fixef), pattern = "L_z")]
+    
+    # Make covar matrix
+    L <- matrix(0, nrow = n_j, ncol = n_j)
+    #### Fill iin Cholesky Matrix ####
+    Count = 1
+    D <- 0.00001
+    Count = 1
+    
+    for (r in 1:3) {
+      for (c in 1:3) {
+        if (r == c) {
+          L[r, c] = L_z[Count]
+          Count <- Count + 1
+        }
+        if (r > c) {
+          L[r, c] = L_z[Count]
+          Count <- Count + 1
+        }
+      }
+    }
+    
+    sigma <- L %*% t(L) + D
+    return(sigma)
+  }
+  
+  
+  
