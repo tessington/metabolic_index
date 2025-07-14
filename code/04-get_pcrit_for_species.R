@@ -8,6 +8,7 @@ library(gridExtra)
 library(readxl)
 library(Matrix)
 library(worrms)
+library(purrr)
 conflicted::conflict_prefer("select", "dplyr")
 conflicted::conflict_prefer("filter", "dplyr")
 
@@ -15,7 +16,8 @@ conflicted::conflict_prefer("filter", "dplyr")
 ## load functions ####
 source("code/helper/fit_model_funs.R")
 
-model.fit <- fit_model_augmented_taxa(fitnew = T)
+# load (or create) fitted model
+model.fit <- fit_model_augmented_taxa(fitnew = F)
 
 # Do this for several types of sculplin in family cottidae
 species.names <- c("Clinocottus globiceps", "Clinocottus analis", "Astrocottus leprops")
@@ -24,11 +26,12 @@ method.names <- c("smr", "routine")
 # create a dataframe of all combinations of the above
 prediction_info <- tidyr::expand_grid(taxa.name = species.names, method = method.names)
 
+# calcualte pcrit for each comboination above and put in data frame
 result_df <- pmap_dfr(prediction_info, 
                       function(taxa.name, method) {
-                        result <- estimate_taxa_full(taxa.name = taxa.name,
-                                                     w = 10,
-                                                     temperature = 10,
+                        result <- estimate_taxa(taxa.name = taxa.name,
+                                                     w = 25,
+                                                     temperature = 20,
                                                      method = method,
                                                      rep = model.fit$rep,
                                                      ParentChild_gz = model.fit$ParentChild_gz)
@@ -40,7 +43,7 @@ result_df <- pmap_dfr(prediction_info,
                         }
                       )
 
-# renames species
+# rename species for genus and family - level
 result_df$species[result_df$species == species.names[2] ] <- "Clinocottus sp."
 result_df$species[result_df$species == species.names[3] ] <- "Cottidae"
 
@@ -52,8 +55,9 @@ result_df <- result_df %>%
   )
 
 # colors to use:
-colors = c("#67a9cf", "#ef8a62")
-theme_set(theme_bw(base_size = 16))
+colors = c("#0072B2", "#D55E00")
+# setup theme
+theme_set(theme_bw(base_size = 18))
 theme_update(panel.grid.major = element_blank(), 
              panel.grid.minor = element_blank(),
              strip.background = element_blank(),
@@ -65,7 +69,8 @@ plot_results <- ggplot(data = result_df, aes(y = ypos, x = log_pcrit, col = meth
   geom_point(size = 4) +
   geom_errorbarh(aes(xmin = log_pcrit - se_pcrit,
                      xmax = log_pcrit + se_pcrit),
-                 linewidth = 1, height = 0.1) +
+                 linewidth = 1, height = 0.1,
+                 show.legend = FALSE) +
   scale_y_continuous(
     breaks = 1:length(unique(result_df$species_factor)),
     labels = levels(result_df$species_factor)
@@ -76,10 +81,16 @@ plot_results <- ggplot(data = result_df, aes(y = ypos, x = log_pcrit, col = meth
     minor_breaks = log(seq(2,10, by = 0.1)),
     name = bquote(p[crit]) ) +
   ylab("") +
-  scale_color_manual(values = colors, name = NULL)
+  scale_color_manual(values = colors, name = NULL, labels = c("Oxyconformity", "Standard Metabolic Rate")) +
+  theme(legend.position = "top")
 
 print(plot_results)
-    
-  
+ggsave(file = "figures/clinocottus_globiceps.png",
+       plot = plot_results,
+       device = "png",
+       units = "px",
+       scale = 5,
+       width = 600,
+       height = 300)
 
 

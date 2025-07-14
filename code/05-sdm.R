@@ -64,23 +64,21 @@ pacific_hake <- dplyr::filter(dat, common_name == "pacific hake")
 pacific_cod <- dplyr::filter(dat, common_name == "pacific cod")
 pacific_halibut <- dplyr::filter(dat, common_name == "pacific halibut")
 
-# function to streamline code.  Calculated P(po2 > pcrit) for each row of dataframe
+# function to streamline code.  Calculate P(po2 > pcrit) for each row of dataframe
 update_df <- function(species_df, taxa.name, w, pcrit_type = "smr", rep, ParentChild_gz) {
-# get parameter estimtes
-  taxa_estimates <- estimate_taxa_full(taxa.name, 
+# get parameter estimates
+  taxa_estimates <- estimate_taxa(taxa.name, 
                                      w = w ,
                                      temperature = 10,
                                      method = pcrit_type,
                                      rep  = model.fit$rep, 
                                      ParentChild_gz = model.fit$ParentChild_gz)
-
-# use pmap to run calc_p_po2
-betas <- taxa_estimates$parameters[,1]
-var_covar <- taxa_estimates$var_covar
-
-species_df$p_pcrit <- pmap_dbl(list(po2 = species_df$po2, temp = species_df$temperature_C),
+  # use pmap to run calc_p_po2
+  betas <- taxa_estimates$parameters[,1]
+  var_covar <- taxa_estimates$var_covar
+  species_df$p_pcrit <- pmap_dbl(list(po2 = species_df$po2, temp = species_df$temperature_C),
                                 ~calc_p_po2(po2 = ..1, temp = ..2, w = w,  pcrit_type = pcrit_type, betas = betas, var_covar = var_covar)
-)
+                                )
 
 return(species_df)
 }
@@ -112,7 +110,7 @@ dover_sole <- update_df(dover_sole, taxa.name, pcrit_type = pcrit_type, w = W,mo
 dover_sole$cpue_weight <- with(dover_sole, catch_weight / effort)
 
 # filter data by depth of 97.5 percent of occurences
-
+# function
 trim_depths <- function(data.2.use, threshold) {
   number_occurences <- sum(data.2.use$present_absent)
   sorted_data <- sort_by(data.2.use, ~ depth)
@@ -120,15 +118,16 @@ trim_depths <- function(data.2.use, threshold) {
   return.data <- sorted_data[sorted_data$cumsum_occurence/number_occurences <= threshold,]
   return(return.data)
 }
-# Model Fitting ####
+# trim data by depth ####
+depth_threshold <- 0.975
 pacific_cod <- trim_depths(data.2.use = pacific_cod,
-                           threshold = 0.975)
+                           threshold = depth_threshold)
 pacific_halibut <- trim_depths(data.2.use = pacific_halibut,
-                               threshold = 0.975)
+                               threshold = depth_threshold)
 pacific_hake <- trim_depths(data.2.use = pacific_hake,
-                               threshold = 0.975)
+                               threshold = depth_threshold)
 dover_sole <- trim_depths(data.2.use = dover_sole,
-                               threshold = 0.975)
+                               threshold = depth_threshold)
 
 # Function to fit species distribution model ####
 fit_model <- function(data.2.use, formula_2_use, includepo2 = T) {

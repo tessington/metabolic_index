@@ -57,6 +57,7 @@ for (i in 1:length(unique.taxa)) {
   all.dat$Family[taxa.index] <- lookup.taxa(classificationTree, "Family")
   all.dat$Genus[taxa.index] <- lookup.taxa(classificationTree, "Genus")
   if(all.dat$lowest.taxon[taxa.index[1]] =="species")  all.dat$Species[taxa.index] <- lookup.taxa(classificationTree, "Species")
+  if(all.dat$lowest.taxon[ taxa.index[ 1 ] ] == "genus") all.dat$Species[ taxa.index ] <- paste(all.dat$Genus[taxa.index[ 1 ] ], "spp")
 
 }
 nrow(all.dat)

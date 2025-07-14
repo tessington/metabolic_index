@@ -16,5 +16,35 @@ calc_mi <- function(pO2, logw, inv_temperature, betas, var_covar, method = "smr"
   return(list ( mi = exp(log_mi_predict), lower_bound = exp(log_lower_bound), upper_bound = exp(log_upper_bound) ) )
 }
 
-betas <- taxa_estimates$parameters[,1]
+
+# to use this
+# calculate parameter values and variance - covariance
+library(dplyr)
+library(MASS)
+library(TMB)
+library(ggplot2)
+library(gridExtra)
+library(readxl)
+library(Matrix)
+library(worrms)
+library(purrr)
+conflicted::conflict_prefer("select", "dplyr")
+conflicted::conflict_prefer("filter", "dplyr")
+
+# Setup Code ####
+## load functions ####
+source("code/helper/fit_model_funs.R")
+
+taxa.name <- "Oncorhynchus tshawytscha"
+model.fit <- fit_model_augmented_taxa(fitnew = F)
+model_output <- estimate_taxa_full(taxa.name,
+                                   w = 4000,
+                                   temperature = 10,
+                                   method = "routine",
+                                   rep = model.fit$rep,
+                                   ParentChild_gz = model.fit$ParentChild_gz)
+
+betas <- model_output$parameters[,1]
+print(betas)
+print(model_output$var_covar)
 calc_mi(5, log(500 / 10), inv_temperature = 0.75,  betas = betas, var_covar = taxa_estimates$var_covar, method = "smr", confidence_level = 0.95)

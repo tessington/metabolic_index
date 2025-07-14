@@ -1,11 +1,9 @@
-library(KernSmooth)
+# functions used throughout project
 library(mgcv)
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
 library(Matrix)
-library(tmbstan)
-library(knitr)
 library(egg)
 library(cowplot)
 library(KernSmooth)
@@ -16,8 +14,6 @@ library(gsw)
 kelvin <- function(x) x+273.15
 find_index <- function(x,y) y <- which(y == x)
 filter_data <- function(data.df) {
-  data.df <- data.df %>%
-      dplyr::filter(Species != "Styela plicata")
   data.df$EstMethod_Metric <- tolower(data.df$EstMethod_Metric)
   data.df <- dplyr::filter(data.df, !Method == "unknown", !EstMethod_Metric == "unknown")
   ## Keep only oxygen consumption methods
@@ -25,66 +21,6 @@ filter_data <- function(data.df) {
   return(data.df)
 }
   
-# Make a dataframe for plotting group-level estimates ####  
-make_df_plot <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
-  
-  group_index <- which(ParentChild_gz$ChildTaxon==level)
-  groupname <- groups[level]
-  GroupNames <- gsub(".*_","",ParentChild_gz$ChildName[group_index])
-  
-  
-  Est <- tibble("{groupname}" := GroupNames,
-                logV = beta_mle[group_index,1],
-                logVmin = beta_mle[group_index,1] - beta_se[group_index,1],
-                logVmax = beta_mle[group_index,1]  + beta_se[group_index,1],
-                Eo = beta_mle[group_index,3],
-                Eomin = beta_mle[group_index,3] - beta_se[group_index,3],
-                Eomax = beta_mle[group_index,3] + beta_se[group_index,3],
-                n = beta_mle[group_index,2],
-                nmin = beta_mle[group_index,2] - beta_se[group_index,2],
-                nmax = beta_mle[group_index,2] + beta_se[group_index,2],
-  )
-  return(Est)
-}
-
-# Function to make a species-level dataframe of estimates ####
-make_species_df <- function(level, beta_mle, beta_se, ParentChild_gz, groups) {
-  
-  group_index <- which(ParentChild_gz$ChildTaxon==level)
-  groupname <- groups[level]
-  GroupNames <- gsub(".*_","",ParentChild_gz$ChildName[group_index])
-  
-  
-  Est <- tibble("{groupname}" := GroupNames,
-                logV = beta_mle[group_index,1],
-                logVSE = beta_se[group_index,1],
-                Eo = beta_mle[group_index,3],
-                EoSE = beta_se[group_index,3],
-                n = beta_mle[group_index,2],
-                nSE = beta_se[group_index,2],
-                
-  )
-  return(Est)
-}
-
-# Function for plotting estimates by specified group ####
-plotest <- function(dataest, trait, groupname, xmin, xmax) {
-  trait <- enquo(trait)
-  groupname <- enquo(groupname)
-  xmin <- enquo(xmin)
-  xmax <- enquo(xmax)
-  
-  groupplot <- ggplot(data = dataest, aes(x = !!trait, y = !!groupname)) +
-    geom_point(size = 2) + 
-    scale_y_discrete(limits = rev) +
-    geom_errorbar(aes(y = !!groupname,
-                      xmin = !!xmin,
-                      xmax = !!xmax)
-    )
-  
-  return(groupplot)
-}
-
 # Make taxonomic matrix ####
 make_taxa_tree <- function(all.dat, taxa.list) {
   Z_ik_main <- dplyr::select(all.dat, all_of(taxa.list))
@@ -141,7 +77,7 @@ make_taxa_tree <- function(all.dat, taxa.list) {
   n_g = nrow(ParentChild_gz)
   n_i <- length(g_i)
   
-  ## Create index of data to Parent - Child ####
+  ## Create index of data to Parent - Child 
   #Z_ik_dat <- dplyr::select(all.dat, Class, Order, Family, Species)
   Taxa_Names_dat <-  apply(Z_ik_main,
                            MARGIN = 1,
@@ -185,29 +121,21 @@ load_data <- function() {
   return(all.dat)
 }
 
-
-  
-  # Function to make residual plots ####
+  # Function to make diagnostic plots ####
   plot_diagnostics <- function(model, Pcrit, inv.temp, W, SpeciesEst, method_mat=NULL, beta_method = NULL,
                                beta_source= NULL, source_id = NULL) {
-    if (!model %in% c("base", "method", "paper", "group")) stop("input model 
-                                                              must be either base, method, paper or group"
-    )
+    if (!model %in% c("base", "method")) stop("input model must be either base or method")
     
-    # Calculate expected values ####
+    # Calculate expected values ##
     ndata <- length(Pcrit)
     est <- rep(NA, times = length(Pcrit))
     for (i in 1:ndata) {
       species.index <- which(SpeciesEst$Species == all.dat$Species[i])
       mipars <-cbind(SpeciesEst$logV, SpeciesEst$n, SpeciesEst$Eo)[species.index,]
-      #  paper.index <- all.dat$SourceNo[i]
       est[i] <- mipars[1] - log(W[i]) * mipars[2] - inv.temp[i] * mipars[3]
     }
     if (model == "method")
       est <- est + method_mat[,-1] %*% matrix(beta_method, ncol = 1)
-    if (model %in% c("paper, group"))
-      est <- est + method_mat[,-1] %*% matrix(beta_method, ncol = 1) + 
-      beta_source[source_id]
     
     res <- log(Pcrit) - est
     
@@ -227,7 +155,6 @@ load_data <- function() {
       xlab("Predicted") +
       ylab("Residual") 
     
-    
     qq_plot <- ggplot(plot.dat, aes(sample = res)) +
       stat_qq() + stat_qq_line(linewidth = 1.0) +
       xlab("Theoretical Quantiles") +
@@ -238,161 +165,10 @@ load_data <- function() {
       xlab("Residual") +
       ylab("Density")
     
-    
     return(grid.arrange(pred_plot, pred_resid, qq_plot, density_plot, nrow = 2, ncol = 2))
   }
 
-  
-# Summarize model estimates for taxonomic groups ####  
-summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
-    
-    if (taxa.list[1] == "Family") baselevel = 0
-    if (taxa.list[1] == "Order") baselevel =1
-    if (taxa.list[1] == "Class") baselevel =2
-    if (taxa.list[1] == "Phylum") baselevel =3
-    
-    ## Phylum ####
-    if (taxa.list[1] == "Phylum") {
-      PhylumEst <- make_df_plot(level = 1,
-                               beta_mle,
-                               beta_se,
-                               ParentChild_gz,
-                               groups = taxa.list)
-      PhylumEst <- merge(PhylumEst, phylum_summary)
-    }
-    ## Class ####
-    if (taxa.list[1] %in% c("Phylum", "Class")) {
-      ClassEst <- make_df_plot(level = 2,
-                  beta_mle,
-                  beta_se,
-                  ParentChild_gz,
-                  groups = taxa.list)
-      ClassEst <- merge(ClassEst, class_summary)
-    }
-    if (taxa.list[1] %in% c("Order", "Class", "Phylum") ) {
-      ## By Order #####
-      OrderEst <- make_df_plot(level = baselevel, 
-                               beta_mle,
-                               beta_se,
-                               ParentChild_gz,
-                               groups = taxa.list)
-      
-      OrderEst <- merge(OrderEst, order_summary)
-    }
-    if (taxa.list[1] %in% c("Family","Order", "Class", "Phylum")) {
-      ## By Family ####
-      FamilyEst <- make_df_plot(level = baselevel + 1, 
-                                beta_mle,
-                                beta_se,
-                                ParentChild_gz,
-                                groups = taxa.list)
-      FamilyEst <- merge(FamilyEst, family_summary)
-    }
-   
-    
-    SpeciesEst <- make_species_df(level = baselevel + 3, 
-                                  beta_mle,
-                                  beta_se,
-                                  ParentChild_gz,
-                                  groups = taxa.list)
-    
-    
-    output <- list(FamilyEst = FamilyEst,
-                   SpeciesEst = SpeciesEst)
-    if (taxa.list[1] == "Phylum") output$PhylumEst = PhylumEst
-    if (taxa.list[1] %in% c("Phylum", "Class") ) output$ClassEst = ClassEst
-    if (taxa.list[1] %in% c("Phylum", "Class", "Order") ) output$OrderEst = OrderEst
-    return(output)
-  }
-  
-  
-  
-  plot_by_group <- function(sum_est) {
-    
-    ### Plot Orders #####
-    add_number <- function(txt, num) paste0(txt, " (", num,")")
-    
-    Est.2.plot <- dplyr::filter(sum_est$OrderEst, NoSpecies >=2)
-    Est.2.plot <- Est.2.plot %>%
-      mutate(Order_num = add_number(Order, NoSpecies))
-    
-    Vploto <- plotest(Est.2.plot, logV, Order_num, logVmin, logVmax)
-    Vploto <- Vploto + xlab("log(V)") + xlim(c(0.5, 2)) + ylab("Order")
-    Eoploto <- plotest(Est.2.plot, Eo, Order, Eomin, Eomax)
-    Eoploto <- Eoploto + theme(axis.text.y = element_blank(), 
-                               axis.title.y = element_blank()
-    )  +
-      xlab(expression("E"[o])) +
-      xlim(c(0, 0.75)) +
-      ggtitle("Figure 2")
-    
-    
-    nploto <- plotest(Est.2.plot, n, Order, nmin, nmax)
-    nploto <- nploto + xlim(c(-0.175, 0.05)) + theme(axis.text.y = element_blank(), 
-                                                     axis.title.y = element_blank()
-    )
-    
-    order_plot <- ggarrange(Vploto, 
-                            nploto,
-                            Eoploto,
-                            nrow = 1)
-    
-    
-    
-    ## Plot Families #####
-    Est.2.plot <- dplyr::filter(sum_est$FamilyEst, NoSpecies >=2)
-    Est.2.plot <- Est.2.plot %>%
-      mutate(Family_num = add_number(Family, NoSpecies))
-    Vplotf <- plotest(Est.2.plot, logV, Family_num, logVmin, logVmax)
-    Vplotf <- Vplotf + xlab("log(V)") + xlim(c(0.5, 2.25)) + ylab("Family")
-    Eoplotf <- plotest(Est.2.plot, Eo, Family, Eomin, Eomax)
-    Eoplotf <- Eoplotf + theme(axis.text.y = element_blank(),
-                               axis.title.y = element_blank()
-    )  +
-      xlab(expression("E"[o]))+
-      xlim(c(0, 0.7)) +
-      ggtitle("Figure 3")
-    
-    nplotf <- plotest(Est.2.plot, n, Family, nmin, nmax)
-    nplotf <- nplotf + xlim(c(-0.2, 0.05)) + theme(axis.text.y = element_blank(),
-                                                   axis.title.y = element_blank()
-    )  
-    family_plot <-  ggarrange(Vplotf, 
-                              nplotf,
-                              Eoplotf,
-                              nrow = 1)
-    
-    print(order_plot)
-    print(family_plot)
-    
-  }
-  
-  filter_dat <- function(dat) {
-    rem_styela <- T
-    if (rem_styela) dat <- dat %>%
-        dplyr::filter(Species != "Styela plicata")
-    rem_unknown <- T
-    dat$EstMethod_Metric <- tolower(dat$EstMethod_Metric)
-    if (rem_unknown) dat <- dplyr::filter(dat, !Method == "unknown", !EstMethod_Metric == "unknown")
-    
-    # Keep only oxygen consumption methods
-    dat <- dplyr::filter(dat, Method == "OxygenConsumption")
-    return(dat)
-  }
-  
-  
-    
-  
-  
-  
-  theme_set(theme_bw(base_size = 16))
-  theme_update(panel.grid.major = element_blank(), 
-               panel.grid.minor = element_blank(),
-               strip.background = element_blank())
-  
-  
-  
-  
+
   # calc o2 solubility, relies on o2 in umol/kg
   gsw_O2sol_SP_pt <- function(sal,pt) {
     library(gsw)
@@ -695,89 +471,9 @@ summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
       }
     }
   }
-  # Estimate pcrit for taxa ####
-  estimate_taxa <- function(taxa.name, 
-                            w ,
-                            temperature,
-                            method = "smr",
-                            rep,
-                            ParentChild_gz) {
-    
-    # first load taxa
-    all.dat <- load_data()
-    all.dat <- filter_data(all.dat)
-    
-    # lookup rownumber for listed taxa within ParentChild matrix
-    lookup_row_number <- lookup_taxonomic_group(taxa.name = taxa.name,
-                                                all.dat = all.dat,
-                                                ParentChild_gz = ParentChild_gz)
-    
-    # Extract fitted parameters from fitted object
-    re <- summary(rep, "random")
-    fixef <- summary(rep, "fixed")
-    names <- rownames(rep)
-    n_j <- 3 # number of traits
-    n_g <- nrow(ParentChild_gz) # number of taxagroups
-    
-    beta_mle <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 1],
-                       nrow = n_g,
-                       ncol = 3,
-                       byrow = F)
-    
-    beta_se <- matrix(re[grep(rownames(re), pattern = "beta_gj"), 2],
-                      nrow = n_g,
-                      ncol = 3,
-                      byrow = F)
-    
-    # Extract taxonomic-specific values
-    beta_mle_taxa <- beta_mle[lookup_row_number, ]
-    beta_se_taxa <- beta_se[lookup_row_number, ]
-    
-    
-    # Lookup beta_method
-    beta_method_index <- which(names == "beta_method")
-    beta_method <- fixef["beta_method", 1]
-    beta_method_se <- fixef["beta_method", 2]
-    
-    # Do calculations to approximate the variance- covariance matrix
-    # I assume no covariance between traits and beta_method
-    Sigma_hat <- calc_sigma(model.fit$rep)
-    scaling <- beta_se_taxa / sqrt(diag(Sigma_hat) )
-    V_approx_beta_j <- diag(scaling) %*% Sigma_hat %*% diag(scaling)
-    # now add 0s for beta_method
-    V_approx <- matrix(0, nrow = 4, ncol = 4)
-    V_approx[1:3, 1:3] <- V_approx_beta_j
-    V_approx[4, 4] <- beta_method_se^2
-    
-    # some placeholder settings
-    wref <- 5
-    tref <- 15
-    kb <-  8.617333262145E-5
-    
-    betas <- as.vector(c(beta_mle_taxa, beta_method))
-    logw <- log(w / wref)
-    inv.temp <- 1 / kb * (1 / kelvin(temperature) - 1 / kelvin(tref))
-    
-    # Set up x_predict
-    if (method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 1))
-    if (!method == "smr") x_predict <- as.vector(c(1, -logw, -inv.temp, 0))
-    
-    # calculate prediction and SE of prediction
-    log_pcrit_predict <-  x_predict %*% betas
-    log_pcrit_se <- as.numeric(sqrt(t(x_predict) %*% V_approx %*% x_predict))
-    
-    # format results nicely
-    parameter_estimates <- cbind(c(beta_mle_taxa, beta_method),
-                                 c(beta_se_taxa, beta_method_se))
-    rownames(parameter_estimates) <- c("log(V)", "n", "Eo", "beta_method")
-    colnames(parameter_estimates) <- c("Estimate", "SE")
-    
-    log_pcrit_estimate <- c(logpcrit = log_pcrit_predict, se = log_pcrit_se)
-    return(list(parameters = parameter_estimates, log_pcrit = log_pcrit_estimate, var_covar = V_approx))
-  }
   
   # Estimate pcrit for taxa using full covariance ####
-  estimate_taxa_full <- function(taxa.name, 
+  estimate_taxa <- function(taxa.name, 
                             w ,
                             temperature,
                             method = "smr",
@@ -969,35 +665,6 @@ summarize_estimates <- function (beta_mle, beta_se, ParentChild_gz, taxa.list){
     }
   }
   
-  # Calculated variance- covariance matrix ####
-  calc_sigma <- function(rep) {
-    n_j <- 3
-    fixef <- rep$par.fixed
-    L_z <- fixef[grep(names(fixef), pattern = "L_z")]
-    
-    # Make covar matrix
-    L <- matrix(0, nrow = n_j, ncol = n_j)
-    #### Fill iin Cholesky Matrix ####
-    Count = 1
-    D <- 0.00001
-    Count = 1
-    
-    for (r in 1:3) {
-      for (c in 1:3) {
-        if (r == c) {
-          L[r, c] = L_z[Count]
-          Count <- Count + 1
-        }
-        if (r > c) {
-          L[r, c] = L_z[Count]
-          Count <- Count + 1
-        }
-      }
-    }
-    
-    sigma <- L %*% t(L) + D
-    return(sigma)
-  }
-  
+
   
   
