@@ -8,14 +8,12 @@ v.1.1
 All working R files are in subdirectory "code"
 - 00-plot_taxa.R. Plots the phylogeny of species represented in the dataset and the estimation method
 - 01-configure_mi_data.R.  Adds the taxonomic information by accessing the World Register of Marine Species.  Does not need to be run, as results have been generated and saved in /data/alldata_taxonomy.RDS
-- 02-fit_alternative_models.R.  Fits different models with different top taxonomic levels; Class, Order, Family, and Genus.  Prediction performance is maximized when setting Family as the top level.
-- 03-fit_TMB_model.R.  Runs Hierarchical model using TMB, using Class as the topmost taxonomic level, and plots group-level mean trait values. 
-- 04-fit_TMB_stan.R.  Code to get parameter estimates and pcrit estimates for taxa within and out of dataset.  Calls mane other functions including:
+- 02-fit_TMB_model.R.  Runs Hierarchical model using TMB and returns many high level summaries and estimates. 
+- 03-get_pcrit_for_species.R.  Code to get parameter estimates and pcrit estimates for taxa within and out of dataset.  Calls mane other functions including:
 - - augment_taxa: adds blank taxa at all different levels for prediction of out of sample groups
 - - fit_augmented_taxa: configures data and runs TMB on larger set of random effects for out of sample prediction. Set fitnew = T to rerun estimate, or F to load saved model fit
-- - estimate_taxa: uses TMB model output to extract parameter estimates for taxa and estimate pcrit (returns SE of prediction).  Approximates variance-covariance matrix from conditional SE of fitted parameters
-- - estimate_taxa_full: uses TMB model output to extract parameter estimates for taxa and estimate pcrit (returns SE of prediction).  Uses variance-covariance matrix of full precision matrix 
-- 05-sdm.R.  Fits alternative species distribution models for four groundfish species, and summarizes model selection statistics using cAIC
+- - estimate_taxa: uses TMB model output to extract parameter estimates for taxa and estimate pcrit (returns SE of prediction).  Uses variance-covariance matrix of full precision matrix 
+- 04-sdm.R.  Fits alternative species distribution models for four groundfish species, and summarizes model selection statistics using cAIC
 - helper/fit_model_funs.R.  Contains numerous functions that are called in the above source files.  It is called within those source files.
 - helper/plot.phylo2.funs.R.  Modified version of plot.phylo in ape package
 - helper/calculate_EDF_fn.R.  Calculates empirical degrees of freedom for cAIC calculations (uased by 02-fit_alternative_models.R
