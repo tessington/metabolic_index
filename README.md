@@ -18,7 +18,7 @@ All working R files are in subdirectory "code"
 - helper/plot.phylo2.funs.R.  Modified version of plot.phylo in ape package
 - helper/calculate_EDF_fn.R.  Calculates empirical degrees of freedom for cAIC calculations (uased by 02-fit_alternative_models.R
 
-Files in subdirectory "analysis" are saved products as described above.  It also includes modelfit.RDS, which is a saved TMB fitted  model, and modelfit_stan.RDS, which is another saved TMB model where the model code is modified to permit successful MCMC integration.
+Files in subdirectory "analysis" are saved products as described above.  It also includes modelfit.RDS, which is a saved TMB fitted  model.
 
 All raw data are provided in subdirectory "data".  The primary file is allmidata_xlsx.  The fields are:
 - scientific.name: Genus species, updated June 2025; https://www.marinespecies.org/index.php
