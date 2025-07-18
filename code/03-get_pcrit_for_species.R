@@ -30,11 +30,12 @@ prediction_info <- tidyr::expand_grid(taxa.name = species.names, method = method
 result_df <- pmap_dfr(prediction_info, 
                       function(taxa.name, method) {
                         result <- estimate_taxa(taxa.name = taxa.name,
-                                                     w = 25,
-                                                     temperature = 20,
-                                                     method = method,
-                                                     rep = model.fit$rep,
-                                                     ParentChild_gz = model.fit$ParentChild_gz)
+                                                w = 25,
+                                                temperature = 20,
+                                                method = method,
+                                                rep = model.fit$rep,
+                                                ParentChild_gz = model.fit$ParentChild_gz,
+                                                ps = 0)
                         tibble(species = taxa.name,
                                method = method,
                                log_pcrit = as.numeric(result$log_pcrit["logpcrit"]),

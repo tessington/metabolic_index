@@ -478,7 +478,8 @@ load_data <- function() {
                             temperature,
                             method = "smr",
                             rep,
-                            ParentChild_gz) {
+                            ParentChild_gz,
+                            psigma = 0) {
     
     # first load taxa
     all.dat <- load_data()
@@ -493,6 +494,10 @@ load_data <- function() {
     re <- summary(rep, "random")
     fixef <- summary(rep, "fixed")
     names <- rownames(summary(rep, "all"))
+    
+    # Lookup estimated logsigma
+    logsigma <- fixef["logsigma", "Estimate"]
+    sigma <- exp(logsigma)
     
     n_j <- 3 # number of traits
     n_g <- nrow(ParentChild_gz) # number of taxagroups
@@ -552,7 +557,7 @@ load_data <- function() {
     
     # calculate prediction and SE of prediction
     log_pcrit_predict <-  x_predict %*% betas
-    log_pcrit_se <- as.numeric(sqrt(t(x_predict) %*% V %*% x_predict))
+    log_pcrit_se <- as.numeric(sqrt(t(x_predict) %*% V %*% x_predict + psigma * sigma^2))
     
     # format results nicely
     parameter_estimates <- cbind(c(beta_mle_taxa, beta_method),
