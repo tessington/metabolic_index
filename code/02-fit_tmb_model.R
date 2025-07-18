@@ -227,6 +227,56 @@ n_g <- taxa.info$n_g
 n_i <- taxa.info$n_i
 spc_in_PC_gz <- taxa.info$spc_in_PC_gz
 
+# Fit model without method effect ####
+## Setup TMB ####
+data <- list(PC_gz = PC_gz,
+             g_i = g_i - 1,
+             invtemp = all.dat$inv.temp,
+             logW = log(all.dat$W),
+             taxa_id = g_i_i -1,
+             minuslogpo2 = -log(all.dat$Pcrit),
+             spc_in_PCgz = spc_in_PC_gz -1
+)
+
+parameters = list(alpha_j = c(0, 0, 0),
+                  L_z = rep(1, 6),
+                  log_lambda = rep(-1, length(unique(PC_gz[,2])) -1),
+                  beta_gj = matrix(0, nrow = n_g, ncol = n_j),
+                  logsigma = 0
+)
+
+Random <- c("beta_gj")
+model <- "hierarchical_mi_base"
+compile(paste0("code/TMB/", model, ".cpp"))
+dyn.load(dynlib(paste0("code/TMB/",model)))
+
+## Run TUMB ####
+obj_nomethod <-
+  MakeADFun(
+    data = data,
+    parameters = parameters,
+    DLL = model,
+    random = Random,
+    silent = TRUE
+  )
+opt_nomethod <- nlminb(obj_nomethod$par, obj_nomethod$fn, obj_nomethod$gr)
+rep_nomethod = sdreport( obj_nomethod,
+                getReportCovariance = TRUE, 
+                getJointPrecision=TRUE)
+EDF <- calculate_EDF( obj= obj_nomethod,
+                      opt = opt_nomethod,
+                      nonvariance_fixed_effects = c( "alpha_j", "L_z", "log_lambda"),
+                      prediction_name = "mu",
+                      data_name = "minuslogpo2",
+                      delta = 0.01,
+                      show_progress = F,
+                      refit = "random"
+)
+
+nll_data <- obj_nomethod$report()[["nll_data"]]
+cAIC_nomethod <- 2 * nll_data + 2 * EDF
+
+# Fit model using method effect ####
 ## Setup TMB ####
 data <- list(PC_gz = PC_gz,
              g_i = g_i - 1,
@@ -263,6 +313,23 @@ opt <- nlminb(obj$par, obj$fn, obj$gr)
 rep = sdreport( obj,
                 getReportCovariance = TRUE, 
                 getJointPrecision=TRUE)
+
+## calculate cAIC
+EDF <- calculate_EDF( obj= obj,
+                      opt = opt,
+                      nonvariance_fixed_effects = c("beta_method", "alpha_j", "L_z", "log_lambda"),
+                      prediction_name = "mu",
+                      data_name = "minuslogpo2",
+                      delta = 0.01,
+                      show_progress = F,
+                      refit = "random"
+)
+
+nll_data <- obj$report()[["nll_data"]]
+cAIC_method <- 2 * nll_data + 2 * EDF
+cAIC_list <- c(cAIC_nomethod, cAIC_method)
+print(cAIC_list - min(cAIC_list))
+
 
 re <- summary(rep, "random")
 fixef <- summary(rep, "fixed")

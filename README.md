@@ -16,7 +16,7 @@ All working R files are in subdirectory "code"
 - 04-sdm.R.  Fits alternative species distribution models for four groundfish species, and summarizes model selection statistics using cAIC
 - helper/fit_model_funs.R.  Contains numerous functions that are called in the above source files.  It is called within those source files.
 - helper/plot.phylo2.funs.R.  Modified version of plot.phylo in ape package
-- helper/calculate_EDF_fn.R.  Calculates empirical degrees of freedom for cAIC calculations (uased by 02-fit_alternative_models.R
+- helper/calculate_EDF_fn.R.  Calculates empirical degrees of freedom for cAIC calculations (used by 02-fit_tmb_model.R
 
 Files in subdirectory "analysis" are saved products as described above.  It also includes modelfit.RDS, which is a saved TMB fitted  model.
 
