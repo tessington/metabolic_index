@@ -404,9 +404,15 @@ load_data <- function() {
       } else {
         # reduce df to include only Phylum, Class, etc. Remove unaccepted taxonomy
         taxa_lookup <- as.data.frame(worms_lookup) %>%
-          filter(status == "accepted") %>%
-          select(phylum, class, order, family, genus, scientificname)
+          dplyr::filter(status == "accepted") 
         
+        # if there are no accepted names, return an error
+        if (nrow(taxa_lookup)==0) stop(paste0("Error: Supplied taxa name ", taxa.name, " is not an accepted name in the WoRMS database"))
+        
+        # Keep only the columns for taxonomy
+        
+        taxa_loopup <-  as.data.frame(worms_lookup)  %>%
+          dplyr::select(phylum, class, order, family, genus, scientificname)
         # Identify the lowest taxonomic order that is represented in the df all.dat
         taxa_levels <- c("phylum", "class", "order", "family", "genus")
         
@@ -446,7 +452,7 @@ load_data <- function() {
             family = "blankgenusinfamily_blankgenusinfamily sp",
             order = "blankfamilyinorder_blankgenusinorder_blankgenusinorder sp",
             class = "blankorderinclass_blankfamilyinclass_blankgenusinclass_blankgenusinclass sp",
-            phylum = "blankclassinplyum_blankorderinphylum_blankfamilyinphylum_blankgenusinphylum_blankgenusinphylum sp"
+            phylum = "blankclassinphylum_blankorderinphylum_blankfamilyinphylum_blankgenusinphylum_blankgenusinphylum sp"
           )
           
           placeholder <- placeholder_suffix[[lowest_shared_rank]]

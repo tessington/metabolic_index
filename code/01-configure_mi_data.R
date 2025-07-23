@@ -97,15 +97,3 @@ sum_by_study <- all.dat %>%
             norder = length(unique(Order)),
             nclass = length(unique(Class))
             )
-
-
-
-
-# output for supplemental table
-taxa_summary <- dplyr::select(all.dat, Source, Species, Phylum, Order, Family)
-taxa_summary <- dplyr::distinct(taxa_summary)
-  
-
-# write to csv.file,
-write.csv(taxa_summary, file = "analysis/taxa_source.csv", row.names = F)
-

@@ -387,10 +387,14 @@ sampled_species_standard_deviation <- apply(X = SpeciesEst[,c("logV","n", "Eo")]
 
 
 ## a plot of all species pcrit, vs. temperature and body mass
+temp_2_plot <- seq(0, 35, by = 5)
+inv_temp_ticks <- (1/ kb) * (1 / kelvin(temp_2_plot) - 1 / kelvin(tref) )
+
 alldata_plot_temperature <- ggplot(data = all.dat, aes(x = inv.temp, y = log(Pcrit), col = as.factor(Phylum) )) + 
   scale_colour_viridis_d(option = "turbo") +
   geom_point(size = 2) +
-  xlab("Inverse Temperature") + 
+  scale_x_continuous(breaks = inv_temp_ticks, labels = temp_2_plot,
+                     name = "Temperature °C") +
   ylab(bquote( log( p["crit"] ) ) ) +
   labs(col = "Phylum")
 
