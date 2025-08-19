@@ -8,7 +8,7 @@ source("code/helper/plot.phylo2.funs.R")
 all.dat <- load_data()
 all.dat <- filter_data(all.dat)
 
-all.taxa <- dplyr::select(all.dat, Phylum, Class, Order, Family, Genera, Species)
+all.taxa <- dplyr::select(all.dat, Phylum, Class, Order, Family, Genus, Species)
 all.taxa <- dplyr::distinct(all.taxa)
 
 # for each taxa, figure out if used oxyconform, SMR, or both
@@ -52,8 +52,7 @@ pdf(file = "figures/taxa_plot3.pdf",
     height = 7,
     width = 7)
 
-plot.phylo2(tr, "fan", cex = 0.8, show.node.label = T, use.edge.length = T, show.tip.label =F, edge.width = 2, adj = 1)
-#nodelabels()
+plot.phylo2(tr, "fan", cex = 0.8, show.node.label = F, use.edge.length = T, show.tip.label =F, edge.width = 2, adj = 1)
 tiplabels(pch = 21, col = "black", bg = color_by_species, cex = 1.5)
 dev.off()
 

@@ -1,4 +1,4 @@
-#options(echo = FALSE)
+
 rm(list = ls())
 library(dplyr)
 library(MASS)
@@ -16,26 +16,24 @@ conflicted::conflict_prefer("filter", "dplyr")
 ## load functions ####
 source("code/helper/fit_model_funs.R")
 
-# load (or create) fitted model
-model.fit <- fit_model_augmented_taxa(fitnew = F)
 
-# Do this for several types of sculplin in family cottidae
+# Do this for several types of sculpin in family cottidae
 species.names <- c("Clinocottus globiceps", "Clinocottus analis", "Astrocottus leprops")
 method.names <- c("smr", "routine")
 
 # create a dataframe of all combinations of the above
 prediction_info <- tidyr::expand_grid(taxa.name = species.names, method = method.names)
 
-# calcualte pcrit for each comboination above and put in data frame
+# calcualte pcrit for each combination above and put in data frame
 result_df <- pmap_dfr(prediction_info, 
                       function(taxa.name, method) {
                         result <- estimate_taxa(taxa.name = taxa.name,
                                                 w = 25,
                                                 temperature = 20,
                                                 method = method,
-                                                rep = model.fit$rep,
-                                                ParentChild_gz = model.fit$ParentChild_gz,
-                                                ps = 0)
+                                                ps = 0,
+                                                fitnew = F)
+                        
                         tibble(species = taxa.name,
                                method = method,
                                log_pcrit = as.numeric(result$log_pcrit["logpcrit"]),

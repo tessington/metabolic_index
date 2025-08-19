@@ -483,14 +483,22 @@ load_data <- function() {
                             w ,
                             temperature,
                             method = "smr",
-                            rep,
-                            ParentChild_gz,
-                            psigma = 0) {
+                            psigma = 0, 
+                            fitnew = F) {
     
+    # input checking
+    method <- tolower(method)
+    if (!method %in% c("routine", "smr")) stop("input argument method must be either 'routine' or 'smr'")
+    
+  
     # first load taxa
     all.dat <- load_data()
     all.dat <- filter_data(all.dat)
     
+    # load model or fit new one
+    model.fit <- fit_model_augmented_taxa(fitnew = fitnew)
+    ParentChild_gz <- model.fit$ParentChild_gz
+    rep = model.fit$rep
     # lookup rownumber for listed taxa within ParentChild matrix
     lookup_row_number <- lookup_taxonomic_group(taxa.name = taxa.name,
                                                 all.dat = all.dat,
@@ -675,7 +683,5 @@ load_data <- function() {
       }
     }
   }
-  
-
   
   
