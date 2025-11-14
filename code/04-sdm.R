@@ -222,6 +222,8 @@ make_spatial_blocks <- function(data.2.use,
 # Function to loop through models and save results
 
 fit_all_models <- function(data.2.use, seed) {
+  
+  nfolds <- 5
   # transform predictors
   data.2.use$log_depth_scaled <- scale(log(data.2.use$depth))
   data.2.use$temp_scaled <- scale(data.2.use$temperature_C)
@@ -231,7 +233,7 @@ fit_all_models <- function(data.2.use, seed) {
   
   # get spatial blocking
   set.seed(seed)
-  data.2.use <- make_spatial_blocks(data.2.use, block_size = 65, number_of_folds = 5)
+  data.2.use <- make_spatial_blocks(data.2.use, block_size = 65, number_of_folds = nfolds)
   
   # make mesh
   spde <- build_mesh(data.2.use)
@@ -253,36 +255,73 @@ fit_all_models <- function(data.2.use, seed) {
                          spde = spde,
                          max_threshold = max(data.2.use$po2_scaled))
   
-  return(list(base = base_model, ppcrit = ppcrit_model, po2= po2_model, cv_scores = c(base_model$sum_loglik,
-                                                                 ppcrit_model$sum_loglik,
-                                                                 po2_model$sum_loglik) ) )
+  # calculate standard error of the cross validation score for model selection - following Yates et al. 2022
+  
+  fold_loglik <- matrix(NA, nrow = nfolds, ncol = 3)
+  fold_loglik[,1] <- base_model$fold_loglik
+  fold_loglik[,2] <- ppcrit_model$fold_loglik
+  fold_loglik[,3] <- po2_model$fold_loglik
+  
+  all_cv <- c(base_model$sum_loglik,
+              ppcrit_model$sum_loglik,
+              po2_model$sum_loglik)
+  
+  best_model <- which(all_cv == max(all_cv))
+  
+  sigma_best <- sd(fold_loglik[,best_model]) / sqrt(nfolds)
+  
+  rho_best <- rep(0, 3)
+  for (i in 1:3) rho_best[i] <- cor(fold_loglik[,i], fold_loglik[, best_model])
+  
+  sigma_m <- apply(fold_loglik, FUN = sd, MARGIN = 2) / sqrt(nfolds)
+  
+  sigmas <- sigma_best * sqrt(1 - rho_best)
+  
+  Sm <- max(all_cv) - all_cv # pairwise differences
+  sigma_difference <- rep(0, 3)
+  for (i in 1:3) sigma_difference[i] <- sqrt(sigma_m[i]^2 + sigma_best^2 - 2 * rho_best[i] * sigma_m[i] * sigma_best)
+  sigma_difference[best_model] <- 0 # by definition
+  
+  return(list(base = base_model, ppcrit = ppcrit_model, po2= po2_model, cv_scores = all_cv, sigmas = sigmas, Sm = Sm, sigma_difference = sigma_difference ) )
   
 }
   
   
 
 # Fit models to each species ####
+seed <- 707
 ## Pacific cod ####
-pacific_cod_fits  <- fit_all_models(data.2.use = pacific_cod, seed = 1311)
+pacific_cod_fits  <- fit_all_models(data.2.use = pacific_cod, seed = seed)
 ## Pacific halibut ####
-pacific_halibut_fits <- fit_all_models(data.2.use = pacific_halibut, seed = 1311)
+pacific_halibut_fits <- fit_all_models(data.2.use = pacific_halibut, seed = seed)
 ## Pacific hake ####
-pacific_hake_fits <- fit_all_models(data.2.use = pacific_hake, seed = 1311)
+pacific_hake_fits <- fit_all_models(data.2.use = pacific_hake, seed = seed)
 ## Dover sole ####
-dover_sole_fits <- fit_all_models(data.2.use = dover_sole, seed = 1311)
+dover_sole_fits <- fit_all_models(data.2.use = dover_sole, seed = seed)
 ## Longspine thornyhead ####
-longspine_thornyhead_fits <- fit_all_models(data.2.use = longspine_thornyhead, seed = 1311)
+longspine_thornyhead_fits <- fit_all_models(data.2.use = longspine_thornyhead, seed = seed)
 ## Canary rockfish ####
-canary_rockfish_fits <- fit_all_models(data.2.use = canary_rockfish, seed = 1311)
+canary_rockfish_fits <- fit_all_models(data.2.use = canary_rockfish, seed = seed)
 
 # make master CV table ####
 cv_table <- matrix(0,nrow = 6, ncol = 3)
-rownames( cv_table ) <- c("Pacific cod", "Pacific halibut", "Pacific hake", "Dover sole", "Longspine thornyhead", "Canary rockfish")
+rownames( cv_table ) <- c("Pacific cod", "Pacific halibut", "Canary rockfish", "Pacific hake", "Dover sole", "Longspine thornyhead")
 colnames( cv_table ) <- c("base", "ppcrit", "po2")
-cv_table["Pacific cod",] <- pacific_cod_fits$cv_scores 
-cv_table["Pacific halibut",] <-pacific_halibut_fits$cv_scores
-cv_table["Pacific hake",] <- pacific_hake_fits$cv_scores
-cv_table["Dover sole",] <- dover_sole_fits$cv_scores
-cv_table["Longspine thornyhead",] <- longspine_thornyhead_fits$cv_scores
-cv_table["Canary rockfish",] <- canary_rockfish_fits$cv_scores
+cv_table["Pacific cod",] <- pacific_cod_fits$Sm
+cv_table["Pacific halibut",] <-pacific_halibut_fits$Sm
+cv_table["Canary rockfish",] <- canary_rockfish_fits$Sm
+cv_table["Pacific hake",] <- pacific_hake_fits$Sm
+cv_table["Dover sole",] <- dover_sole_fits$Sm
+cv_table["Longspine thornyhead",] <- longspine_thornyhead_fits$Sm
 print( cv_table )
+
+sigma_table <- matrix(0,nrow = 6, ncol = 3)
+rownames( sigma_table ) <- c("Pacific cod", "Pacific halibut", "Canary rockfish", "Pacific hake", "Dover sole", "Longspine thornyhead")
+colnames( sigma_table ) <- c("base", "ppcrit", "po2")
+sigma_table["Pacific cod",] <- pacific_cod_fits$sigma_difference
+sigma_table["Pacific halibut",] <-pacific_halibut_fits$sigma_difference
+sigma_table["Canary rockfish",] <- canary_rockfish_fits$sigma_difference
+sigma_table["Pacific hake",] <- pacific_hake_fits$sigma_difference
+sigma_table["Dover sole",] <- dover_sole_fits$sigma_difference
+sigma_table["Longspine thornyhead",] <- longspine_thornyhead_fits$sigma_difference
+print( sigma_table )
