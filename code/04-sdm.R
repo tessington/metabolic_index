@@ -152,7 +152,7 @@ build_mesh <- function(data.2.use, cutoff = 10) {
   sdmTMB::make_mesh(data.2.use, c("X","Y"), mesh = inla_mesh)
 }
 
-fit_model <- function(data.2.use, formula_2_use, spde, modeltype = "base", max_threshold = NULL) {
+fit_model <- function(data.2.use, formula_2_use, spde, modeltype = "base", min_threshold = NULL) {
   print(modeltype)
   # setup sdmTMB control specifications
   if (modeltype == "base") {
@@ -175,8 +175,8 @@ fit_model <- function(data.2.use, formula_2_use, spde, modeltype = "base", max_t
     lower_bound_array = rep(-Inf, 2)
     upper_bound_array <- rep(Inf, 2)
     lower_bound_array[1] <- 0
-    if(!is.null(max_threshold)) {
-      upper_bound_array[2] <- max_threshold
+    if(!is.null(min_threshold)) {
+      lower_bound_array[2] <- min_threshold
     }
     
     control = sdmTMBcontrol(lower = list(b_threshold = lower_bound_array), 
@@ -205,7 +205,9 @@ fit_model <- function(data.2.use, formula_2_use, spde, modeltype = "base", max_t
 
 make_spatial_blocks <- function(data.2.use, 
                                 block_size = 100,
-                                number_of_folds = 4) {
+                                number_of_folds = 4,
+                                type = "cells") {
+  if (type == "cells") {
   data.2.use.adjusted <- sf::st_as_sf(data.2.use, coords = c("X", "Y"), crs = NA)
   spatial_blocking <- cv_spatial(
     x = data.2.use.adjusted,
@@ -214,6 +216,25 @@ make_spatial_blocks <- function(data.2.use,
     k = number_of_folds,
     selection = "random",
     iteration = 50)
+  }
+  
+  if (type == "rows") {
+    data.vertical.range <- max(data.2.use$Y) - min(data.2.use$Y)
+    target_width <- block_size
+    
+    number_rows <- ceiling(data.vertical.range / target_width)
+    
+    data.2.use.adjusted <- sf::st_as_sf(data.2.use, coords = c("X", "Y"), crs = NA)
+    spatial_blocking <- cv_spatial(
+      x = data.2.use.adjusted,
+      column = "present_absent",
+      rows_cols = c(number_rows,1),
+      k = number_of_folds,
+      hexagon = FALSE,
+      selection = "systematic",
+      extend = 0.5)
+    
+  }
   return_data <- data.2.use
   return_data$folds <- spatial_blocking$folds_ids
   return(return_data)
@@ -233,7 +254,7 @@ fit_all_models <- function(data.2.use, seed) {
   
   # get spatial blocking
   set.seed(seed)
-  data.2.use <- make_spatial_blocks(data.2.use, block_size = 65, number_of_folds = nfolds)
+  data.2.use <- make_spatial_blocks(data.2.use, block_size = 65, number_of_folds = nfolds, type = "cells")
   
   # make mesh
   spde <- build_mesh(data.2.use)
@@ -246,14 +267,14 @@ fit_all_models <- function(data.2.use, seed) {
                             formula_2_use = formula(present_absent ~ breakpt(p_pcrit_scaled)  + s(log_depth_scaled)  +  temp_scaled + temp_scaled_squared  + survey),
                             modeltype = "threshold",
                             spde = spde,
-                            max_threshold = max(data.2.use$p_pcrit_scaled)
+                            min_threshold = min(data.2.use$p_pcrit_scaled)
                             )
   
   po2_model <- fit_model(data.2.use = data.2.use,
                           formula_2_use = formula(present_absent ~ breakpt(po2_scaled)  + s(log_depth_scaled) + temp_scaled + temp_scaled_squared  + survey),
                          modeltype ="threshold",
                          spde = spde,
-                         max_threshold = max(data.2.use$po2_scaled))
+                         min_threshold = min(data.2.use$po2_scaled))
   
   # calculate standard error of the cross validation score for model selection - following Yates et al. 2022
   
