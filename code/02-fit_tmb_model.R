@@ -390,21 +390,26 @@ sampled_species_standard_deviation <- apply(X = SpeciesEst[,c("logV","n", "Eo")]
 temp_2_plot <- seq(0, 35, by = 5)
 inv_temp_ticks <- (1/ kb) * (1 / kelvin(temp_2_plot) - 1 / kelvin(tref) )
 
-alldata_plot_temperature <- ggplot(data = all.dat, aes(x = inv.temp, y = log(Pcrit), col = as.factor(Phylum) )) + 
+
+po2_temp_tick_labels <- c(0.5, 1,2,5, 10, 20)
+po2_temp_ticks <- log(po2_temp_tick_labels)
+
+alldata_plot_temperature <- ggplot(data = all.dat, aes(x = Temp, y = log(Pcrit), col = as.factor(Phylum) )) + 
   scale_colour_viridis_d(option = "turbo") +
   geom_point(size = 2) +
-  scale_x_continuous(breaks = inv_temp_ticks, labels = temp_2_plot,
-                     name = "Temperature °C") +
-  ylab(bquote( log( p["crit"] ) ) ) +
+  scale_x_continuous( name = "Temperature °C") +
+  scale_y_continuous(breaks = po2_temp_ticks, labels = po2_temp_tick_labels) +
+  ylab(bquote(  p["crit"] ~(kPa)) )  +
   labs(col = "Phylum")
-
+alldata_plot_temperature
 alldata_plot_w<- ggplot(data = all.dat, aes(x =log(W), y = log(Pcrit), col = as.factor(Phylum) )) + 
   scale_colour_viridis_d(option = "turbo") +
   geom_point(size = 2) +
+  scale_y_continuous(breaks = po2_temp_ticks, labels = po2_temp_tick_labels) +
   xlab ("log(W)" ) + 
-  ylab(bquote( log( p["crit"] ) ) ) +
+  ylab(bquote(  p["crit"] ~(kPa)) )  +
   labs(col = "Phylum")
-
+alldata_plot_w
 alldata_plot <- 
   cowplot::plot_grid(alldata_plot_temperature + theme(legend.position="none"),
              alldata_plot_w + theme(legend.position="none"),
